@@ -186,10 +186,23 @@ final class StatusBarItemController {
             // Right button click — instant-join shortcut, unchanged by the
             // Calenbar glass panel below (this was never a menu trigger).
             joinNextMeeting()
-        } else if event == nil || event?.type == .leftMouseDown || event?.type == .leftMouseUp {
+        } else if event == nil || event?.type == .leftMouseUp {
             // Left click now shows the Liquid Glass panel instead of the
             // classic NSMenu directly. The classic menu (openMenu(), below)
             // is still reachable from the panel's "More…" row.
+            //
+            // Deliberately NOT handling .leftMouseDown here, even though
+            // button.sendAction(on:) above still requests it: that was
+            // needed for the old openMenu() → performClick() path (which
+            // blocked inside NSMenu's own tracking loop, so a same-click
+            // .leftMouseUp resend was effectively absorbed by the time it
+            // arrived). CalenbarPanelController.toggle() is synchronous and
+            // non-blocking, so acting on both .leftMouseDown and
+            // .leftMouseUp would call showCalenbarPanel() twice per click —
+            // open, then immediately close again before the panel is ever
+            // visible. Only responding on mouse-up (a completed click, or
+            // an accessibility/AppleScript-triggered click reporting no
+            // event) avoids that.
             showCalenbarPanel()
         }
     }

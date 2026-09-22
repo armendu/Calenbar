@@ -126,7 +126,12 @@ final class CalenbarPanelController: NSObject {
         )
         let visible = screen.visibleFrame
         origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
-        origin.y = max(origin.y, visible.minY + 8)
+        // Clamp both edges, not just the bottom: today's agenda is bounded
+        // to one day's events so this shouldn't trigger in practice, but an
+        // unusually tall panel (e.g. a day packed with meetings) should
+        // still be pulled down to fit on-screen rather than clipped off the
+        // top, the same way the bottom edge is already handled.
+        origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
         panel.setFrameOrigin(origin)
     }
 
@@ -147,12 +152,34 @@ final class CalenbarPanelController: NSObject {
     /// only needs to handle *outside* clicks; a click landing back on the
     /// status item is deliberately left to `toggle`, not double-handled here.
     private func installDismissalMonitors(ignoring button: NSStatusBarButton) {
-        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self, weak button] event in
-            guard let self, let button, let buttonWindow = button.window else { return }
+        // .keyDown is included here (not just click events) because the
+        // panel deliberately never becomes key (.nonactivatingPanel +
+        // orderFrontRegardless(), not makeKeyAndOrderFront — see `show`).
+        // With the panel non-key, the actual key window stays whatever other
+        // app's window was key before the status item was clicked, so an Esc
+        // press is delivered to THAT app, not to us — a *local* monitor
+        // (which only observes events sent to this app) would never see it.
+        // A *global* monitor observes events delivered to other
+        // applications, which is exactly why the existing click-outside
+        // handling below already has to use one; the same reasoning applies
+        // to Esc, so both live on one global monitor rather than pairing a
+        // global click monitor with a local key monitor that would rarely
+        // fire in practice.
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self, weak button] event in
+            guard let self else { return }
+            if event.type == .keyDown {
+                if event.keyCode == kVK_Escape { self.dismiss() }
+                return
+            }
+            guard let button, let buttonWindow = button.window else { return }
             let clickedStatusItemButton = buttonWindow.windowNumber == event.windowNumber
             guard !clickedStatusItemButton else { return }
             self.dismiss()
         }
+        // Defensive fallback: a global monitor cannot observe events sent to
+        // this app itself, so this covers the (normally unreachable, since
+        // the panel isn't key) case where Esc somehow does land locally —
+        // harmless to keep, and swallows the event when it does apply.
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             if event.keyCode == kVK_Escape {
