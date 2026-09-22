@@ -352,8 +352,14 @@ final class MenuBuilderTests: BaseTestCase {
         state.nextEvent = event
         state.settings = .empty
 
-        let presentation = MenuBuilder(target: Dummy(), state: state, now: now)
-            .meetingSummaryPresentation(for: event)
+        let presentation = meetingSummaryPresentation(
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
+            now: now,
+            isFantasticalInstalled: false,
+            labels: .current
+        )
 
         XCTAssertEqual(
             presentation.metadata.filter { $0 == duplicateValue }.count,
@@ -378,8 +384,14 @@ final class MenuBuilderTests: BaseTestCase {
         state.settings = .empty
         state.settings.statusBar.eventTitleFormat = .generic
 
-        let presentation = MenuBuilder(target: Dummy(), state: state, now: now)
-            .meetingSummaryPresentation(for: event)
+        let presentation = meetingSummaryPresentation(
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
+            now: now,
+            isFantasticalInstalled: false,
+            labels: .current
+        )
 
         XCTAssertEqual(presentation.eventTitle, event.title)
     }

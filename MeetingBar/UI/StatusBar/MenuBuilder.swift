@@ -249,6 +249,11 @@ struct MenuBuilder {
     ) -> [NSMenuItem] {
         var items: [NSMenuItem] = []
 
+        // Computed once per section (not per row) — makeEventItem only needs
+        // allDayLabel out of this, but most events aren't all-day, so this
+        // avoids 5 `.loco()` lookups per ordinary timed event.
+        let labels = CalenbarPanelLabels.current
+
         // Header
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "E, d MMM"
@@ -298,7 +303,7 @@ struct MenuBuilder {
             items.append(item)
         }
         for event in sortedEvents {
-            if let item = makeEventItem(event) {
+            if let item = makeEventItem(event, labels: labels) {
                 items.append(item)
             }
         }
@@ -530,7 +535,7 @@ struct MenuBuilder {
 
     // MARK: - Private helpers --------------------------------------------------
 
-    private func makeEventItem(_ event: MBEvent) -> NSMenuItem? {
+    private func makeEventItem(_ event: MBEvent, labels: CalenbarPanelLabels) -> NSMenuItem? {
         guard shouldRenderEvent(event) else { return nil }
 
         let menuTitle = eventMenuTitle(for: event)
@@ -538,7 +543,7 @@ struct MenuBuilder {
             for: CalenbarEventInput(event),
             timeFormat: CalenbarTimeFormat(state.timeFormat),
             locale: I18N.instance.locale,
-            allDayLabel: CalenbarPanelLabels.current.allDayStartLabel
+            allDayLabel: labels.allDayStartLabel
         )
         let itemTitle = eventItemAttributedTitle(
             eventTitle: menuTitle,

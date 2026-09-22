@@ -67,7 +67,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         )
     }
 
-    func test_primarySection_withNextEvent_producesSummaryAndAgenda() {
+    func testPrimarySectionWithNextEventProducesSummaryAndAgenda() {
         let next = makeEvent(
             title: "Stand Up",
             startDate: now.addingTimeInterval(4 * 60),
@@ -85,7 +85,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.emptyStateMessage)
     }
 
-    func test_primarySection_withNoUpcomingEvent_producesEmptyState() {
+    func testPrimarySectionWithNoUpcomingEventProducesEmptyState() {
         let state = makeState(nextEvent: nil, todayEvents: [])
         let viewModel = build(state)
         XCTAssertNil(viewModel.summary)
@@ -93,7 +93,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.emptyStateMessage, "No upcoming meetings")
     }
 
-    func test_summary_forCurrentlyRunningEvent_usesCurrentMeetingTitleAndNoCountdown() {
+    func testSummaryForCurrentlyRunningEventUsesCurrentMeetingTitleAndNoCountdown() {
         let running = makeEvent(
             title: "Standup",
             startDate: now.addingTimeInterval(-300),
@@ -107,7 +107,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.summary?.countdown)
     }
 
-    func test_agendaRow_marksCurrentlyRunningEventAsCurrent() {
+    func testAgendaRowMarksCurrentlyRunningEventAsCurrent() {
         let running = makeEvent(
             id: "running",
             title: "Running Meeting",
@@ -130,7 +130,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(upcomingRow?.isCurrent, false)
     }
 
-    func test_agendaRow_allDayEvent_usesAllDayTimeRangeText() {
+    func testAgendaRowAllDayEventUsesAllDayTimeRangeText() {
         let allDay = makeEvent(
             id: "all-day",
             title: "Company Holiday",
@@ -152,7 +152,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(allDayRow?.timeRangeText, "All day")
     }
 
-    func test_agendaRow_untitledEvent_fallsBackToNoTitleLabel() {
+    func testAgendaRowUntitledEventFallsBackToNoTitleLabel() {
         let untitled = makeEvent(
             id: "untitled",
             title: "",
@@ -166,7 +166,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agenda.first?.title, "No title")
     }
 
-    func test_agendaRow_timedEvent_usesTwentyFourHourFormatWhenConfigured() {
+    func testAgendaRowTimedEventUsesTwentyFourHourFormatWhenConfigured() {
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC")!
         let start = utc.date(from: DateComponents(year: 2024, month: 3, day: 1, hour: 14, minute: 30))!
