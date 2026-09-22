@@ -215,10 +215,12 @@ struct MenuBuilder {
         }
 
         let presentation = meetingSummaryPresentation(
-            for: event,
-            state: state,
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
             now: now,
-            isFantasticalInstalled: isFantasticalInstalled
+            isFantasticalInstalled: isFantasticalInstalled,
+            labels: .current
         )
         let summary = MeetingSummaryView(
             presentation: presentation,
@@ -532,7 +534,12 @@ struct MenuBuilder {
         guard shouldRenderEvent(event) else { return nil }
 
         let menuTitle = eventMenuTitle(for: event)
-        let time = eventTimePresentation(for: event, timeFormat: state.timeFormat)
+        let time = eventTimePresentation(
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
+            allDayLabel: CalenbarPanelLabels.current.allDayStartLabel
+        )
         let itemTitle = eventItemAttributedTitle(
             eventTitle: menuTitle,
             time: time,

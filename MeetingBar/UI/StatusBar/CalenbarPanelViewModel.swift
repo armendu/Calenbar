@@ -12,10 +12,6 @@ import Foundation
 /// living only inside the SwiftUI/AppKit view file. `MeetingSummaryView`
 /// still renders it — no extra import is needed there since both files
 /// compile into the same app target/module.
-///
-/// This mirrors how `MeetingServices` was relocated into
-/// `MeetingLinkDetector.swift` for the same reason: "enum lives [there] so
-/// it can be reached from the hostless logic target."
 struct MeetingSummaryPresentation: Equatable {
     let sectionTitle: String
     let eventTitle: String
@@ -47,6 +43,74 @@ struct EventTimePresentation {
     let end: String
 }
 
+// MARK: - Shadow inputs
+
+// `meetingSummaryPresentation`/`eventTimePresentation`/`CalenbarPanelViewModel.build`
+// need to compile inside the hostless `MeetingBarLogic` SPM target, so they
+// can't take the real `MBEvent`/`StatusBarMenuState`/`TimeFormat` directly:
+//   - MBEvent.calendar is MBCalendar, which stores an NSColor.
+//   - StatusBarMenuState.settings is AppSettings, which imports the external
+//     `Defaults` package (not a dependency of this target), and TimeFormat
+//     itself is `Defaults.Serializable`.
+//   - Localized strings normally come from `"...".loco()` / `I18N`, but no
+//     other pure file in this target calls those either (confirmed: none of
+//     the current `MeetingBarLogic` sources reference `.loco()` or `I18N`) —
+//     the established convention is to take already-localized strings in as
+//     data (see `StatusBarTitleLabels` in StatusBarPresentation.swift), not
+//     to look them up from policy code.
+//
+// So, mirroring `StatusBarEventPresentationInput`/`StatusBarTitleLabels` in
+// StatusBarPresentation.swift (and how `MeetingServices` itself was
+// relocated into MeetingLinkDetector.swift for the same reason), these are
+// pure, AppKit/Defaults/I18N-free mirrors of just the fields the moved
+// functions read. `CalenbarPanelViewModel+MeetingBar.swift` (app-target
+// only) adapts the real types into these.
+
+/// Pure mirror of the `MBEvent` fields `meetingSummaryPresentation`,
+/// `eventTimePresentation`, and `CalenbarPanelViewModel.build` read.
+struct CalenbarEventInput: Equatable {
+    let id: String
+    let title: String
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+    let meetingService: MeetingServices?
+    let calendarEmail: String?
+    let calendarSource: String
+    let calendarTitle: String
+    let organizerEmail: String?
+}
+
+/// Pure mirror of `TimeFormat` (Utilities/Constants.swift), which is
+/// `Defaults.Serializable` and therefore not visible inside this target.
+enum CalenbarTimeFormat: Equatable {
+    case twelveHour
+    case twentyFourHour
+}
+
+/// Pure mirror of the `StatusBarMenuState` fields `CalenbarPanelViewModel.build`
+/// reads.
+struct CalenbarPanelStateInput: Equatable {
+    let nextEvent: CalenbarEventInput?
+    let todayEvents: [CalenbarEventInput]
+    let timeFormat: CalenbarTimeFormat
+}
+
+/// Pre-localized strings the pure panel logic needs, in place of calling
+/// `.loco()` directly. Mirrors `StatusBarTitleLabels`; populated by
+/// `CalenbarPanelLabels.current` in the `+MeetingBar.swift` adapter.
+struct CalenbarPanelLabels: Equatable {
+    let noTitle: String
+    let currentMeetingSectionTitle: String
+    let nextMeetingSectionTitle: String
+    /// Format string with one `%@` placeholder for the relative countdown,
+    /// e.g. "in %@" — the raw (unsubstituted) localized value of
+    /// `status_bar_event_status_in`.
+    let countdownFormat: String
+    let allDayStartLabel: String
+    let noUpcomingMessage: String
+}
+
 // MARK: - Calenbar panel view model
 
 /// One row of the "today" agenda list in the glass panel.
@@ -60,41 +124,51 @@ struct CalenbarAgendaRow: Equatable, Identifiable {
 
 /// AppKit-free snapshot of everything the glass panel's primary section
 /// needs to render: the current/next meeting summary card, plus today's
-/// agenda rows. Built from the same `StatusBarMenuState` that drives the
-/// existing `MenuBuilder`-based dropdown, so both stay in sync.
+/// agenda rows. Built from the same data that drives the existing
+/// `MenuBuilder`-based dropdown (via `CalenbarPanelStateInput`, adapted from
+/// `StatusBarMenuState`), so both stay in sync.
 struct CalenbarPanelViewModel: Equatable {
     var summary: MeetingSummaryPresentation?
     var agenda: [CalenbarAgendaRow]
     var emptyStateMessage: String?
 
     static func build(
-        from state: StatusBarMenuState,
+        from state: CalenbarPanelStateInput,
         now: Date,
-        isFantasticalInstalled: Bool
+        isFantasticalInstalled: Bool,
+        locale: Locale,
+        labels: CalenbarPanelLabels
     ) -> CalenbarPanelViewModel {
         guard let next = state.nextEvent else {
             return CalenbarPanelViewModel(
                 summary: nil,
                 agenda: [],
-                emptyStateMessage: "status_bar_control_no_upcoming".loco()
+                emptyStateMessage: labels.noUpcomingMessage
             )
         }
 
         let summary = meetingSummaryPresentation(
             for: next,
-            state: state,
+            timeFormat: state.timeFormat,
+            locale: locale,
             now: now,
-            isFantasticalInstalled: isFantasticalInstalled
+            isFantasticalInstalled: isFantasticalInstalled,
+            labels: labels
         )
 
         let agenda = state.todayEvents.map { event -> CalenbarAgendaRow in
-            let time = eventTimePresentation(for: event, timeFormat: state.timeFormat)
+            let time = eventTimePresentation(
+                for: event,
+                timeFormat: state.timeFormat,
+                locale: locale,
+                allDayLabel: labels.allDayStartLabel
+            )
             let isCurrent = event.startDate <= now && event.endDate > now
             return CalenbarAgendaRow(
                 id: event.id,
-                title: event.title.isEmpty ? "status_bar_no_title".loco() : event.title,
+                title: event.title.isEmpty ? labels.noTitle : event.title,
                 timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
-                meetingService: event.meetingLink?.service,
+                meetingService: event.meetingService,
                 isCurrent: isCurrent
             )
         }
@@ -109,33 +183,39 @@ struct CalenbarPanelViewModel: Equatable {
 /// instance method reading `self.now`) so this logic is reusable outside
 /// menu construction — by `CalenbarPanelViewModel.build` above, and by
 /// `MenuBuilder.makeMeetingSummaryItem`, which now calls this free function
-/// instead of its own (removed) method.
+/// (via the `CalenbarEventInput(event)` adapter) instead of its own
+/// (removed) method.
 ///
 /// `isFantasticalInstalled` is threaded through for signature parity with
 /// `CalenbarPanelViewModel.build` (which needs it for other panel sections);
 /// the summary card itself does not use it, matching the original method's
 /// behavior exactly.
 func meetingSummaryPresentation(
-    for event: MBEvent,
-    state: StatusBarMenuState,
+    for event: CalenbarEventInput,
+    timeFormat: CalenbarTimeFormat,
+    locale: Locale,
     now: Date,
-    isFantasticalInstalled: Bool
+    isFantasticalInstalled: Bool,
+    labels: CalenbarPanelLabels
 ) -> MeetingSummaryPresentation {
     let isCurrent = event.startDate <= now && event.endDate > now
-    let eventTitle = event.title.isEmpty
-        ? "status_bar_no_title".loco()
-        : event.title
-    let time = eventTimePresentation(for: event, timeFormat: state.timeFormat)
+    let eventTitle = event.title.isEmpty ? labels.noTitle : event.title
+    let time = eventTimePresentation(
+        for: event,
+        timeFormat: timeFormat,
+        locale: locale,
+        allDayLabel: labels.allDayStartLabel
+    )
     let timeRange = event.isAllDay
         ? time.start
         : "\(time.start) – \(time.end)"
-    let meetingProvider = event.meetingLink?.service
+    let meetingProvider = event.meetingService
         .flatMap(MeetingProvider.provider(for:))?
         .displayName
     let account = firstMeaningfulMetadataValue([
-        event.calendar.email,
-        event.calendar.source == "unknown" ? nil : event.calendar.source,
-        event.organizer?.email
+        event.calendarEmail,
+        event.calendarSource == "unknown" ? nil : event.calendarSource,
+        event.organizerEmail
     ])
 
     let countdown: String?
@@ -147,39 +227,45 @@ func meetingSummaryPresentation(
             to: event.startDate,
             calendar: Calendar.current
         )
-        countdown = timeLeft.isEmpty ? nil : "status_bar_event_status_in".loco(timeLeft)
+        countdown = timeLeft.isEmpty ? nil : String(format: labels.countdownFormat, timeLeft)
     }
 
     return MeetingSummaryPresentation(
         sectionTitle: isCurrent
-            ? "status_bar_control_current_meeting".loco()
-            : "status_bar_control_next_meeting".loco(),
+            ? labels.currentMeetingSectionTitle
+            : labels.nextMeetingSectionTitle,
         eventTitle: eventTitle,
         metadata: uniqueMetadataValues([
             timeRange,
             meetingProvider,
             account,
-            event.calendar.title
+            event.calendarTitle
         ]),
-        meetingService: event.meetingLink?.service,
+        meetingService: event.meetingService,
         countdown: countdown
     )
 }
 
 /// Moved from `MenuBuilder` (was a private instance method reading
-/// `self.state.timeFormat`).
+/// `self.state.timeFormat` and `I18N.instance.locale`).
 ///
 /// The plan's original sketch for this function used a `now: Date`
 /// parameter, but the actual method never read `self.now` — only
-/// `self.state.timeFormat` — so this takes `timeFormat` instead of `now`.
-func eventTimePresentation(for event: MBEvent, timeFormat: TimeFormat) -> EventTimePresentation {
+/// `self.state.timeFormat` and the current locale — so this takes
+/// `timeFormat`/`locale` instead.
+func eventTimePresentation(
+    for event: CalenbarEventInput,
+    timeFormat: CalenbarTimeFormat,
+    locale: Locale,
+    allDayLabel: String
+) -> EventTimePresentation {
     let formatter = DateFormatter()
-    formatter.locale = I18N.instance.locale
+    formatter.locale = locale
 
     switch timeFormat {
-    case .am_pm:
+    case .twelveHour:
         formatter.dateFormat = "h:mm a"
-    case .military:
+    case .twentyFourHour:
         formatter.dateFormat = "HH:mm"
     }
 
@@ -193,7 +279,7 @@ func eventTimePresentation(for event: MBEvent, timeFormat: TimeFormat) -> EventT
 
     return EventTimePresentation(
         formatter: formatter,
-        start: "status_bar_event_start_time_all_day".loco(),
+        start: allDayLabel,
         end: ""
     )
 }

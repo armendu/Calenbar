@@ -3,20 +3,6 @@
 //  MeetingBarLogicTests
 //
 
-// NOTE: As of this writing, this test file cannot compile inside the
-// isolated `MeetingBarLogicTests` target — independently of the missing
-// XCTest module in this environment. `CalenbarPanelViewModel`, `MBEvent`,
-// `MBCalendar`, and `StatusBarMenuState` are not part of the `MeetingBarLogic`
-// package: `MBEvent` pulls in `MBCalendar` (which stores an `NSColor`), and
-// `StatusBarMenuState` pulls in `AppSettings`, which depends on the external
-// `Defaults` package that this SPM target does not declare as a dependency.
-// See the CalenbarPanelViewModel.swift header comment and the task's final
-// report for the full explanation. This file documents the intended
-// behavior of `CalenbarPanelViewModel.build(from:now:isFantasticalInstalled:)`
-// and is written against the real, current initializers so it is ready to
-// compile once that type-availability gap is deliberately resolved.
-
-import AppKit
 import XCTest
 
 @testable import MeetingBarLogic
@@ -24,14 +10,17 @@ import XCTest
 final class CalenbarPanelViewModelTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-    private func makeCalendar(
-        title: String = "Work",
-        id: String = "cal-1",
-        source: String? = "Test Source",
-        email: String? = "user@example.com",
-        color: NSColor = .systemBlue
-    ) -> MBCalendar {
-        MBCalendar(title: title, id: id, source: source, email: email, color: color)
+    private let labels = CalenbarPanelLabels(
+        noTitle: "No title",
+        currentMeetingSectionTitle: "Current meeting",
+        nextMeetingSectionTitle: "Next meeting",
+        countdownFormat: "in %@",
+        allDayStartLabel: "All day",
+        noUpcomingMessage: "No upcoming meetings"
+    )
+
+    private func locale() -> Locale {
+        Locale(identifier: "en_US_POSIX")
     }
 
     private func makeEvent(
@@ -40,35 +29,42 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         startDate: Date,
         endDate: Date,
         isAllDay: Bool = false,
-        calendar: MBCalendar? = nil
-    ) -> MBEvent {
-        MBEvent(
+        meetingService: MeetingServices? = nil,
+        calendarEmail: String? = "user@example.com",
+        calendarSource: String = "Test Source",
+        calendarTitle: String = "Work",
+        organizerEmail: String? = nil
+    ) -> CalenbarEventInput {
+        CalenbarEventInput(
             id: id,
-            lastModifiedDate: nil,
             title: title,
-            status: .confirmed,
-            notes: nil,
-            location: nil,
-            url: nil,
-            organizer: nil,
             startDate: startDate,
             endDate: endDate,
             isAllDay: isAllDay,
-            recurrent: false,
-            calendar: calendar ?? makeCalendar()
+            meetingService: meetingService,
+            calendarEmail: calendarEmail,
+            calendarSource: calendarSource,
+            calendarTitle: calendarTitle,
+            organizerEmail: organizerEmail
         )
     }
 
     private func makeState(
-        nextEvent: MBEvent?,
-        todayEvents: [MBEvent],
-        timeFormat: TimeFormat = .military
-    ) -> StatusBarMenuState {
-        var state = StatusBarMenuState()
-        state.nextEvent = nextEvent
-        state.todayEvents = todayEvents
-        state.timeFormat = timeFormat
-        return state
+        nextEvent: CalenbarEventInput?,
+        todayEvents: [CalenbarEventInput],
+        timeFormat: CalenbarTimeFormat = .twentyFourHour
+    ) -> CalenbarPanelStateInput {
+        CalenbarPanelStateInput(nextEvent: nextEvent, todayEvents: todayEvents, timeFormat: timeFormat)
+    }
+
+    private func build(_ state: CalenbarPanelStateInput) -> CalenbarPanelViewModel {
+        CalenbarPanelViewModel.build(
+            from: state,
+            now: now,
+            isFantasticalInstalled: false,
+            locale: locale(),
+            labels: labels
+        )
     }
 
     func test_primarySection_withNextEvent_producesSummaryAndAgenda() {
@@ -79,9 +75,10 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         )
         let state = makeState(nextEvent: next, todayEvents: [next])
 
-        let viewModel = CalenbarPanelViewModel.build(from: state, now: now, isFantasticalInstalled: false)
+        let viewModel = build(state)
 
         XCTAssertEqual(viewModel.summary?.eventTitle, "Stand Up")
+        XCTAssertEqual(viewModel.summary?.sectionTitle, "Next meeting")
         XCTAssertEqual(viewModel.agenda.count, 1)
         XCTAssertEqual(viewModel.agenda.first?.title, "Stand Up")
         XCTAssertEqual(viewModel.agenda.first?.id, next.id)
@@ -90,10 +87,24 @@ final class CalenbarPanelViewModelTests: XCTestCase {
 
     func test_primarySection_withNoUpcomingEvent_producesEmptyState() {
         let state = makeState(nextEvent: nil, todayEvents: [])
-        let viewModel = CalenbarPanelViewModel.build(from: state, now: now, isFantasticalInstalled: false)
+        let viewModel = build(state)
         XCTAssertNil(viewModel.summary)
         XCTAssertTrue(viewModel.agenda.isEmpty)
-        XCTAssertNotNil(viewModel.emptyStateMessage)
+        XCTAssertEqual(viewModel.emptyStateMessage, "No upcoming meetings")
+    }
+
+    func test_summary_forCurrentlyRunningEvent_usesCurrentMeetingTitleAndNoCountdown() {
+        let running = makeEvent(
+            title: "Standup",
+            startDate: now.addingTimeInterval(-300),
+            endDate: now.addingTimeInterval(300)
+        )
+        let state = makeState(nextEvent: running, todayEvents: [running])
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.summary?.sectionTitle, "Current meeting")
+        XCTAssertNil(viewModel.summary?.countdown)
     }
 
     func test_agendaRow_marksCurrentlyRunningEventAsCurrent() {
@@ -111,7 +122,7 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         )
         let state = makeState(nextEvent: upcoming, todayEvents: [running, upcoming])
 
-        let viewModel = CalenbarPanelViewModel.build(from: state, now: now, isFantasticalInstalled: false)
+        let viewModel = build(state)
 
         let runningRow = viewModel.agenda.first { $0.id == "running" }
         let upcomingRow = viewModel.agenda.first { $0.id == "upcoming" }
@@ -135,10 +146,10 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         )
         let state = makeState(nextEvent: next, todayEvents: [allDay, next])
 
-        let viewModel = CalenbarPanelViewModel.build(from: state, now: now, isFantasticalInstalled: false)
+        let viewModel = build(state)
 
         let allDayRow = viewModel.agenda.first { $0.id == "all-day" }
-        XCTAssertEqual(allDayRow?.timeRangeText, "status_bar_event_start_time_all_day".loco())
+        XCTAssertEqual(allDayRow?.timeRangeText, "All day")
     }
 
     func test_agendaRow_untitledEvent_fallsBackToNoTitleLabel() {
@@ -150,8 +161,33 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         )
         let state = makeState(nextEvent: untitled, todayEvents: [untitled])
 
-        let viewModel = CalenbarPanelViewModel.build(from: state, now: now, isFantasticalInstalled: false)
+        let viewModel = build(state)
 
-        XCTAssertEqual(viewModel.agenda.first?.title, "status_bar_no_title".loco())
+        XCTAssertEqual(viewModel.agenda.first?.title, "No title")
+    }
+
+    func test_agendaRow_timedEvent_usesTwentyFourHourFormatWhenConfigured() {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let start = utc.date(from: DateComponents(year: 2024, month: 3, day: 1, hour: 14, minute: 30))!
+        let end = start.addingTimeInterval(1800)
+        let event = makeEvent(id: "timed", title: "Sync", startDate: start, endDate: end)
+        let state = makeState(nextEvent: event, todayEvents: [event], timeFormat: .twentyFourHour)
+
+        let viewModel = CalenbarPanelViewModel.build(
+            from: state,
+            now: start.addingTimeInterval(-3600),
+            isFantasticalInstalled: false,
+            locale: Locale(identifier: "en_US_POSIX"),
+            labels: labels
+        )
+
+        // twentyFourHour uses "HH:mm" with the given locale/timezone-less
+        // formatter (DateFormatter defaults to the system time zone), so we
+        // only assert on the shape (no AM/PM marker) rather than an exact
+        // wall-clock string that would be environment-dependent.
+        let timeRangeText = viewModel.agenda.first?.timeRangeText ?? ""
+        XCTAssertFalse(timeRangeText.contains("AM"))
+        XCTAssertFalse(timeRangeText.contains("PM"))
     }
 }
