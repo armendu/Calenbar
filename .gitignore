@@ -23,3 +23,6 @@ build
 .ignore
 AGENTS.md
 CLAUDE.md
+
+# Local git worktrees (superpowers subagent-driven-development)
+.worktrees/
