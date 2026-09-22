@@ -6,24 +6,9 @@
 import AppKit
 import SwiftUI
 
-struct MeetingSummaryPresentation: Equatable {
-    let sectionTitle: String
-    let eventTitle: String
-    let metadata: [String]
-    let meetingService: MeetingServices?
-    /// Relative time until the meeting starts (e.g. "in 25m"); nil for
-    /// running meetings, where the section title already says enough.
-    var countdown: String?
-
-    var metadataText: String {
-        metadata.joined(separator: " • ")
-    }
-
-    var sectionTitleText: String {
-        guard let countdown, !countdown.isEmpty else { return sectionTitle }
-        return "\(sectionTitle) • \(countdown)"
-    }
-}
+// `MeetingSummaryPresentation` lives in `CalenbarPanelViewModel.swift` (pure,
+// AppKit-free) so it can be produced by logic that doesn't depend on AppKit
+// or SwiftUI. This file just renders it.
 
 struct MeetingSummaryView: View {
     let presentation: MeetingSummaryPresentation

@@ -38,6 +38,27 @@ let package = Package(
                 "Meetings/MeetingProvider.swift",
                 // UI/StatusBar
                 "UI/StatusBar/StatusBarPresentation.swift"
+                // NOTE: "UI/StatusBar/CalenbarPanelViewModel.swift" is deliberately
+                // NOT listed here yet, even though it only imports Foundation.
+                // Its `meetingSummaryPresentation`/`eventTimePresentation`/
+                // `CalenbarPanelViewModel.build` API takes the real `MBEvent`
+                // and `StatusBarMenuState` as parameters (per the plan), and
+                // those types are not part of this isolated target:
+                //   - MBEvent.calendar is MBCalendar, which stores an NSColor
+                //     (Calendar/MBCalendar.swift, not listed above).
+                //   - StatusBarMenuState.settings is AppSettings
+                //     (Settings/AppSettings.swift), which imports the external
+                //     `Defaults` package — not currently a dependency of this
+                //     target, and adding it plus AppSettings' ~15 supporting
+                //     enums (Utilities/Constants.swift) is a much larger,
+                //     separate change than this file's own logic.
+                // Adding this file's path here as-is would break `swift build`
+                // for the whole package. Until MBEvent/StatusBarMenuState (or a
+                // pure equivalent) are deliberately brought into this target,
+                // CalenbarPanelViewModel.swift is a normal app-target-only file:
+                // MenuBuilder.swift calls its two moved free functions, and it
+                // is exercised by CalenbarPanelViewModelTests.swift only once
+                // that follow-up work happens.
             ],
             swiftSettings: [
                 .unsafeFlags(["-strict-concurrency=complete"])

@@ -66,52 +66,6 @@ struct MenuBuilder {
         return items
     }
 
-    func meetingSummaryPresentation(for event: MBEvent) -> MeetingSummaryPresentation {
-        let isCurrent = event.startDate <= now && event.endDate > now
-        let eventTitle = event.title.isEmpty
-            ? "status_bar_no_title".loco()
-            : event.title
-        let time = eventTimePresentation(for: event)
-        let timeRange = event.isAllDay
-            ? time.start
-            : "\(time.start) – \(time.end)"
-        let meetingProvider = event.meetingLink?.service
-            .flatMap(MeetingProvider.provider(for:))?
-            .displayName
-        let account = firstMeaningfulMetadataValue([
-            event.calendar.email,
-            event.calendar.source == "unknown" ? nil : event.calendar.source,
-            event.organizer?.email
-        ])
-
-        let countdown: String?
-        if isCurrent || event.isAllDay {
-            countdown = nil
-        } else {
-            let timeLeft = StatusBarTitlePolicy.formattedTimeLeft(
-                from: now,
-                to: event.startDate,
-                calendar: Calendar.current
-            )
-            countdown = timeLeft.isEmpty ? nil : "status_bar_event_status_in".loco(timeLeft)
-        }
-
-        return MeetingSummaryPresentation(
-            sectionTitle: isCurrent
-                ? "status_bar_control_current_meeting".loco()
-                : "status_bar_control_next_meeting".loco(),
-            eventTitle: eventTitle,
-            metadata: uniqueMetadataValues([
-                timeRange,
-                meetingProvider,
-                account,
-                event.calendar.title
-            ]),
-            meetingService: event.meetingLink?.service,
-            countdown: countdown
-        )
-    }
-
     private func buildProviderWarningItems() -> [NSMenuItem] {
         guard let warning = state.providerWarning else { return [] }
 
@@ -260,7 +214,12 @@ struct MenuBuilder {
             onJoin = nil
         }
 
-        let presentation = meetingSummaryPresentation(for: event)
+        let presentation = meetingSummaryPresentation(
+            for: event,
+            state: state,
+            now: now,
+            isFantasticalInstalled: isFantasticalInstalled
+        )
         let summary = MeetingSummaryView(
             presentation: presentation,
             providerIcon: getIconForMeetingService(presentation.meetingService),
@@ -276,29 +235,6 @@ struct MenuBuilder {
         hosting.autoresizingMask = [.width]
         item.view = hosting
         return item
-    }
-
-    private func firstMeaningfulMetadataValue(_ values: [String?]) -> String? {
-        values.lazy
-            .compactMap { value in
-                value?.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            .first { !$0.isEmpty }
-    }
-
-    private func uniqueMetadataValues(_ values: [String?]) -> [String] {
-        var seen = Set<String>()
-        return values.compactMap { value in
-            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !trimmed.isEmpty
-            else { return nil }
-            let identity = trimmed.folding(
-                options: [.caseInsensitive, .diacriticInsensitive],
-                locale: .current
-            )
-            guard seen.insert(identity).inserted else { return nil }
-            return trimmed
-        }
     }
 
     // MARK: Date section ------------------------------------------------------
@@ -596,7 +532,7 @@ struct MenuBuilder {
         guard shouldRenderEvent(event) else { return nil }
 
         let menuTitle = eventMenuTitle(for: event)
-        let time = eventTimePresentation(for: event)
+        let time = eventTimePresentation(for: event, timeFormat: state.timeFormat)
         let itemTitle = eventItemAttributedTitle(
             eventTitle: menuTitle,
             time: time,
@@ -614,12 +550,6 @@ struct MenuBuilder {
         )
 
         return eventItem
-    }
-
-    private struct EventTimePresentation {
-        let formatter: DateFormatter
-        let start: String
-        let end: String
     }
 
     /// Attributed menu row title: a fixed-width "start–end" time column
@@ -664,32 +594,6 @@ struct MenuBuilder {
             title = "[\("status_bar_event_dismissed_mark".loco())] \(title)"
         }
         return title
-    }
-
-    private func eventTimePresentation(for event: MBEvent) -> EventTimePresentation {
-        let formatter = DateFormatter()
-        formatter.locale = I18N.instance.locale
-
-        switch state.timeFormat {
-        case .am_pm:
-            formatter.dateFormat = "h:mm a"
-        case .military:
-            formatter.dateFormat = "HH:mm"
-        }
-
-        guard event.isAllDay else {
-            return EventTimePresentation(
-                formatter: formatter,
-                start: formatter.string(from: event.startDate),
-                end: formatter.string(from: event.endDate)
-            )
-        }
-
-        return EventTimePresentation(
-            formatter: formatter,
-            start: "status_bar_event_start_time_all_day".loco(),
-            end: ""
-        )
     }
 
     private func eventItemAttributedTitle(
