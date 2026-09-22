@@ -48,6 +48,7 @@ struct StatusBarDependencies {
 final class StatusBarItemController {
     var statusItem: NSStatusItem!
     var statusItemMenu: NSMenu!
+    let calenbarPanelController = CalenbarPanelController()
 
     /// Current event list, driven by the AppModel state.
     /// A non-nil `_eventsOverride` takes precedence (used by tests to inject
@@ -182,11 +183,14 @@ final class StatusBarItemController {
         let event = NSApp.currentEvent
 
         if event?.type == .rightMouseUp {
-            // Right button click
+            // Right button click — instant-join shortcut, unchanged by the
+            // Calenbar glass panel below (this was never a menu trigger).
             joinNextMeeting()
         } else if event == nil || event?.type == .leftMouseDown || event?.type == .leftMouseUp {
-            // show the menu as normal
-            openMenu()
+            // Left click now shows the Liquid Glass panel instead of the
+            // classic NSMenu directly. The classic menu (openMenu(), below)
+            // is still reachable from the panel's "More…" row.
+            showCalenbarPanel()
         }
     }
 
@@ -196,11 +200,46 @@ final class StatusBarItemController {
         statusItem.menu = nil
     }
 
+    func showCalenbarPanel() {
+        guard let button = statusItem.button else { return }
+        calenbarPanelController.toggle(
+            near: button,
+            viewModel: currentCalenbarPanelViewModel(),
+            onJoin: { [weak self] in self?.joinNextMeeting() },
+            onSelectAgendaRow: { [weak self] row in self?.dependencies.send(.joinMeeting(eventID: row.id)) },
+            onShowClassicMenu: { [weak self] in self?.openMenu() }
+        )
+    }
+
+    /// Builds the panel's view model from the same `StatusBarMenuState` that
+    /// drives `updateMenu()`'s classic `NSMenu`, so both surfaces always
+    /// agree on what "next meeting"/"today's agenda" means.
+    private func currentCalenbarPanelViewModel() -> CalenbarPanelViewModel {
+        var appState = dependencies.appState()
+        appState.events = events
+        let menuState = StatusBarMenuState.make(from: appState)
+        return CalenbarPanelViewModel.build(
+            from: CalenbarPanelStateInput(menuState),
+            now: Date(),
+            isFantasticalInstalled: checkIsFantasticalInstalled(),
+            locale: I18N.instance.locale,
+            labels: .current
+        )
+    }
+
     func configure(dependencies: StatusBarDependencies) {
         self.dependencies = dependencies
     }
 
     func updateTitle() {
+        // Keep the glass panel's countdown/agenda live while it's open —
+        // this runs on the same refresh pipeline (Defaults changes + the
+        // periodic CalendarSync timer) that already drives the status item
+        // title, rather than a separate timer of its own.
+        if calenbarPanelController.isVisible {
+            calenbarPanelController.refresh(viewModel: currentCalenbarPanelViewModel())
+        }
+
         let now = Date()
         let presentation = StatusBarPresenter.presentation(
             nextEvent: events.nextEvent().map(StatusBarEventPresentationInput.init),
