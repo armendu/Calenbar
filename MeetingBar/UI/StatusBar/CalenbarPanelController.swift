@@ -165,6 +165,21 @@ final class CalenbarPanelController: NSObject {
         // to Esc, so both live on one global monitor rather than pairing a
         // global click monitor with a local key monitor that would rarely
         // fire in practice.
+        //
+        // CAVEAT (found in review, not yet resolved — needs a real device
+        // to test): unlike global *mouse* monitors, which are unrestricted,
+        // a global monitor for *keyboard* events only delivers callbacks if
+        // the app has been granted Input Monitoring permission (System
+        // Settings → Privacy & Security → Input Monitoring). Nothing in
+        // this app requests or checks for that permission, so on a typical
+        // first run this global .keyDown branch likely never fires — no
+        // crash, just a silent no-op — and Esc-to-dismiss may not actually
+        // work out of the box despite this code being logically correct.
+        // The four other dismissal paths (click-outside, re-click,
+        // app-resign-key, sleep, lock) don't depend on this permission and
+        // remain reliable regardless. Verify Esc's real-world behavior once
+        // this can be run on a device, and decide then whether to prompt
+        // for Input Monitoring or accept Esc as best-effort-only.
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self, weak button] event in
             guard let self else { return }
             if event.type == .keyDown {
