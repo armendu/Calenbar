@@ -94,6 +94,14 @@ struct CalenbarPanelStateInput: Equatable {
     let nextEvent: CalenbarEventInput?
     let todayEvents: [CalenbarEventInput]
     let timeFormat: CalenbarTimeFormat
+    /// Mirrors `EventDisplaySettings.showEventMaxTimeUntilEventEnabled` /
+    /// `.showEventMaxTimeUntilEventThreshold` — the same "don't show the
+    /// event until it's within N minutes" setting the status bar text
+    /// already honors (see `StatusBarPresentationPolicy.mode`, `.afterThreshold`).
+    /// The panel reuses it rather than introducing a second, separate
+    /// "when should this show up" setting.
+    let showMaxTimeUntilEventEnabled: Bool
+    let showMaxTimeUntilEventThresholdMinutes: Int
 }
 
 /// Pre-localized strings the pure panel logic needs, in place of calling
@@ -147,6 +155,31 @@ struct CalenbarPanelViewModel: Equatable {
             )
         }
 
+        // Mirrors StatusBarPresentationPolicy.mode's .afterThreshold gate:
+        // when enabled, an event starting more than N minutes out isn't
+        // shown prominently — reuses the existing "show event max time
+        // until event" setting rather than adding a second, separate
+        // threshold just for this panel. A currently-running event (whose
+        // startDate is in the past) always has a negative timeUntilStart,
+        // so it's never gated out by this check.
+        let timeUntilStart = next.startDate.timeIntervalSince(now)
+        let thresholdSeconds = TimeInterval(state.showMaxTimeUntilEventThresholdMinutes * 60)
+        let isBeyondThreshold = state.showMaxTimeUntilEventEnabled && timeUntilStart >= thresholdSeconds
+
+        guard !isBeyondThreshold else {
+            // Not excluded from the agenda in this branch: since it isn't
+            // being shown as the summary card, listing it below is the only
+            // place it appears at all, rather than disappearing entirely.
+            let agenda = state.todayEvents.map { event in
+                makeAgendaRow(for: event, timeFormat: state.timeFormat, locale: locale, labels: labels, now: now)
+            }
+            let timeLeft = StatusBarTitlePolicy.formattedTimeLeft(from: now, to: next.startDate, calendar: Calendar.current)
+            let message = timeLeft.isEmpty
+                ? labels.nextMeetingSectionTitle
+                : "\(labels.nextMeetingSectionTitle) • \(String(format: labels.countdownFormat, timeLeft))"
+            return CalenbarPanelViewModel(summary: nil, agenda: agenda, emptyStateMessage: message)
+        }
+
         let summary = meetingSummaryPresentation(
             for: next,
             timeFormat: state.timeFormat,
@@ -160,24 +193,33 @@ struct CalenbarPanelViewModel: Equatable {
         // summary card above — repeating it as the first agenda row too
         // just duplicates the same event on screen for no reason. The
         // agenda is "everything else today," not "everything today."
-        let agenda = state.todayEvents.filter { $0.id != next.id }.map { event -> CalenbarAgendaRow in
-            let time = eventTimePresentation(
-                for: event,
-                timeFormat: state.timeFormat,
-                locale: locale,
-                allDayLabel: labels.allDayStartLabel
-            )
-            let isCurrent = event.startDate <= now && event.endDate > now
-            return CalenbarAgendaRow(
-                id: event.id,
-                title: event.title.isEmpty ? labels.noTitle : event.title,
-                timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
-                meetingService: event.meetingService,
-                isCurrent: isCurrent
-            )
+        let agenda = state.todayEvents.filter { $0.id != next.id }.map { event in
+            makeAgendaRow(for: event, timeFormat: state.timeFormat, locale: locale, labels: labels, now: now)
         }
 
         return CalenbarPanelViewModel(summary: summary, agenda: agenda, emptyStateMessage: nil)
+    }
+
+    private static func makeAgendaRow(
+        for event: CalenbarEventInput,
+        timeFormat: CalenbarTimeFormat,
+        locale: Locale,
+        labels: CalenbarPanelLabels,
+        now: Date
+    ) -> CalenbarAgendaRow {
+        let time = eventTimePresentation(
+            for: event,
+            timeFormat: timeFormat,
+            locale: locale,
+            allDayLabel: labels.allDayStartLabel
+        )
+        return CalenbarAgendaRow(
+            id: event.id,
+            title: event.title.isEmpty ? labels.noTitle : event.title,
+            timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
+            meetingService: event.meetingService,
+            isCurrent: event.startDate <= now && event.endDate > now
+        )
     }
 }
 

@@ -45,7 +45,9 @@ extension CalenbarPanelStateInput {
         self.init(
             nextEvent: state.nextEvent.map(CalenbarEventInput.init),
             todayEvents: state.todayEvents.map(CalenbarEventInput.init),
-            timeFormat: CalenbarTimeFormat(state.timeFormat)
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            showMaxTimeUntilEventEnabled: state.events.showEventMaxTimeUntilEventEnabled,
+            showMaxTimeUntilEventThresholdMinutes: state.events.showEventMaxTimeUntilEventThreshold
         )
     }
 }

@@ -52,9 +52,17 @@ final class CalenbarPanelViewModelTests: XCTestCase {
     private func makeState(
         nextEvent: CalenbarEventInput?,
         todayEvents: [CalenbarEventInput],
-        timeFormat: CalenbarTimeFormat = .twentyFourHour
+        timeFormat: CalenbarTimeFormat = .twentyFourHour,
+        showMaxTimeUntilEventEnabled: Bool = false,
+        showMaxTimeUntilEventThresholdMinutes: Int = 60
     ) -> CalenbarPanelStateInput {
-        CalenbarPanelStateInput(nextEvent: nextEvent, todayEvents: todayEvents, timeFormat: timeFormat)
+        CalenbarPanelStateInput(
+            nextEvent: nextEvent,
+            todayEvents: todayEvents,
+            timeFormat: timeFormat,
+            showMaxTimeUntilEventEnabled: showMaxTimeUntilEventEnabled,
+            showMaxTimeUntilEventThresholdMinutes: showMaxTimeUntilEventThresholdMinutes
+        )
     }
 
     private func build(_ state: CalenbarPanelStateInput) -> CalenbarPanelViewModel {
@@ -233,5 +241,107 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let timeRangeText = viewModel.agenda.first?.timeRangeText ?? ""
         XCTAssertFalse(timeRangeText.contains("AM"))
         XCTAssertFalse(timeRangeText.contains("PM"))
+    }
+
+    // MARK: - "show event max time until event" threshold
+
+    /// Reported: the panel showed a meeting as the prominent summary card
+    /// even though it was hours away. Mirrors
+    /// StatusBarPresentationPolicy's existing .afterThreshold behavior for
+    /// the status bar text — when the setting is enabled and the next event
+    /// starts beyond the configured threshold, it shouldn't get the full
+    /// summary treatment.
+    func testEventBeyondThresholdIsNotShownAsSummary() {
+        let farEvent = makeEvent(
+            id: "far", title: "Quarterly Planning",
+            startDate: now.addingTimeInterval(4 * 3600),
+            endDate: now.addingTimeInterval(5 * 3600)
+        )
+        let state = makeState(
+            nextEvent: farEvent, todayEvents: [farEvent],
+            showMaxTimeUntilEventEnabled: true,
+            showMaxTimeUntilEventThresholdMinutes: 60
+        )
+
+        let viewModel = build(state)
+
+        XCTAssertNil(viewModel.summary)
+        XCTAssertEqual(viewModel.emptyStateMessage, "Next meeting • in 4h")
+    }
+
+    /// The event isn't shown as the summary, but it hasn't vanished either —
+    /// it's still listed in the agenda, since nowhere else on the panel
+    /// shows it.
+    func testEventBeyondThresholdStillAppearsInAgenda() {
+        let farEvent = makeEvent(
+            id: "far", title: "Quarterly Planning",
+            startDate: now.addingTimeInterval(4 * 3600),
+            endDate: now.addingTimeInterval(5 * 3600)
+        )
+        let state = makeState(
+            nextEvent: farEvent, todayEvents: [farEvent],
+            showMaxTimeUntilEventEnabled: true,
+            showMaxTimeUntilEventThresholdMinutes: 60
+        )
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.agenda.map(\.id), ["far"])
+    }
+
+    func testEventWithinThresholdIsStillShownAsSummary() {
+        let soonEvent = makeEvent(
+            id: "soon", title: "Stand Up",
+            startDate: now.addingTimeInterval(20 * 60),
+            endDate: now.addingTimeInterval(35 * 60)
+        )
+        let state = makeState(
+            nextEvent: soonEvent, todayEvents: [soonEvent],
+            showMaxTimeUntilEventEnabled: true,
+            showMaxTimeUntilEventThresholdMinutes: 60
+        )
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.summary?.eventTitle, "Stand Up")
+        XCTAssertNil(viewModel.emptyStateMessage)
+    }
+
+    /// The setting defaults to disabled (matches
+    /// DefaultsKeys.showEventMaxTimeUntilEventEnabled's default of false) —
+    /// confirm a far-off event is still shown prominently when it's off,
+    /// which is also `makeState`'s own default in this file.
+    func testThresholdDisabledAlwaysShowsSummaryRegardlessOfDistance() {
+        let farEvent = makeEvent(
+            id: "far", title: "Quarterly Planning",
+            startDate: now.addingTimeInterval(6 * 3600),
+            endDate: now.addingTimeInterval(7 * 3600)
+        )
+        let state = makeState(nextEvent: farEvent, todayEvents: [farEvent])
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.summary?.eventTitle, "Quarterly Planning")
+    }
+
+    /// A currently-running event has a startDate in the past, so
+    /// timeUntilStart is negative and can never be "beyond" a positive
+    /// threshold — it must never be gated out by this check regardless of
+    /// how long ago it started.
+    func testRunningEventIsNeverGatedByThreshold() {
+        let running = makeEvent(
+            id: "running", title: "All-Hands",
+            startDate: now.addingTimeInterval(-3 * 3600),
+            endDate: now.addingTimeInterval(3600)
+        )
+        let state = makeState(
+            nextEvent: running, todayEvents: [running],
+            showMaxTimeUntilEventEnabled: true,
+            showMaxTimeUntilEventThresholdMinutes: 60
+        )
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.summary?.eventTitle, "All-Hands")
     }
 }
