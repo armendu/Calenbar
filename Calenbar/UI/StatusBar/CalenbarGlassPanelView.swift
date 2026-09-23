@@ -41,6 +41,26 @@ struct CalenbarGlassPanelView: View {
 
     private static let tileShape = RoundedRectangle(cornerRadius: 20, style: .continuous)
 
+    /// The real Calendar.app icon, which macOS renders with today's actual
+    /// date baked in (the same "torn calendar page" trick Calendar.app's own
+    /// icon and several third-party menu-bar calendar apps use) — used for
+    /// the empty state instead of a generic checkmark, since "today's date"
+    /// is a much more immediately legible signal than a tick mark for "no
+    /// more meetings today."
+    private static var todaysCalendarIcon: NSImage {
+        let candidatePaths = [
+            "/System/Applications/Calendar.app",
+            "/Applications/Calendar.app"
+        ]
+        for path in candidatePaths where FileManager.default.fileExists(atPath: path) {
+            return NSWorkspace.shared.icon(forFile: path)
+        }
+        // Calendar.app should always be present on macOS, but fall back to a
+        // generic symbol rather than crash if it's ever missing/renamed.
+        return NSImage(systemSymbolName: "calendar", accessibilityDescription: nil)
+            ?? NSImage(size: NSSize(width: 18, height: 18))
+    }
+
     var body: some View {
         GlassEffectContainer(spacing: 10) {
             VStack(alignment: .leading, spacing: 10) {
@@ -74,8 +94,10 @@ struct CalenbarGlassPanelView: View {
                 .padding(4)
             } else {
                 HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                    Image(nsImage: Self.todaysCalendarIcon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
                     Text(viewModel.emptyStateMessage ?? "")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
