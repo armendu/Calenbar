@@ -90,16 +90,17 @@ final class CalenbarPanelController: NSObject {
             onShowClassicMenu: { [weak self] in self?.dismissThenPerform(onShowClassicMenu) }
         )
         let hosting = CalenbarPanelHostingView(rootView: panelView)
-        // Give the hosting view a concrete starting frame before asking for
-        // fittingSize. A standalone (non-windowed) compile-time check during
-        // development showed this producing a correct, non-zero size for
-        // this panel's fixed-width/natural-height layout even
-        // pre-attachment to a window — but that check never ran inside a
-        // real app/window server, so treat this as "expected to work," not
-        // confirmed: verify fittingSize's actual runtime value the first
-        // time this runs on a device, before trusting it further.
-        hosting.frame = NSRect(x: 0, y: 0, width: CalenbarGlassPanelView.width, height: 1)
-        let fitSize = hosting.fittingSize
+        // On-device testing showed fittingSize.width is NOT trustworthy for
+        // this view: GlassEffectContainer content can report an "ideal"
+        // intrinsic width that ignores CalenbarGlassPanelView's own
+        // `.frame(width:)` constraint, producing a panel that stretched to
+        // fill most of the screen instead of staying at the intended 380pt.
+        // The width is a compile-time-known constant regardless — only ask
+        // fittingSize for the height, measured at that fixed width.
+        let targetWidth = CalenbarGlassPanelView.width
+        hosting.frame = NSRect(x: 0, y: 0, width: targetWidth, height: 1)
+        hosting.layoutSubtreeIfNeeded()
+        let fitSize = NSSize(width: targetWidth, height: max(hosting.fittingSize.height, 1))
         hosting.frame = NSRect(origin: .zero, size: fitSize)
 
         let panel = NSPanel(
