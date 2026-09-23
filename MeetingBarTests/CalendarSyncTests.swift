@@ -9,7 +9,7 @@ import Combine
 import Defaults
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 class CalendarSyncTests: BaseTestCase {

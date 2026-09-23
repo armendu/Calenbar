@@ -8,7 +8,7 @@
 
 import Foundation
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class FakeEventStore: AuthenticatedEventStore {
     nonisolated(unsafe) var stubbedCalendars: [MBCalendar]

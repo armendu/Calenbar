@@ -8,7 +8,7 @@ import XCTest
 
 import Defaults
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class PatronageProductTests: XCTestCase {
     func testProductDurationsKeepExistingIdentifiers() {

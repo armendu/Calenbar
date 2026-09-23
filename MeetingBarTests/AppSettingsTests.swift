@@ -10,7 +10,7 @@
 import Defaults
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class AppSettingsTests: BaseTestCase {

@@ -12,7 +12,7 @@
 
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class BookmarkMigrationTests: XCTestCase {
     private let decoder = JSONDecoder()
