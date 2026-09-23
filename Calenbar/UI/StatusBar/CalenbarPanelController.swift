@@ -87,7 +87,15 @@ final class CalenbarPanelController: NSObject {
             viewModel: viewModel,
             onJoin: { [weak self] in onJoin(); self?.dismiss() },
             onSelectAgendaRow: { [weak self] row in onSelectAgendaRow(row); self?.dismiss() },
-            onShowClassicMenu: { [weak self] in onShowClassicMenu(); self?.dismiss() }
+            // Dismiss BEFORE calling onShowClassicMenu, not after: openMenu()
+            // -> performClick(nil) enters a blocking modal tracking loop for
+            // as long as the classic NSMenu is open. Dismissing afterward
+            // meant the glass panel stayed on screen the entire time the
+            // classic menu was showing - two floating panels stacked at
+            // once, which read as broken/confusing (and put "Quit Calenbar"
+            // visually right where a user reaching to dismiss the mess would
+            // click).
+            onShowClassicMenu: { [weak self] in self?.dismiss(); onShowClassicMenu() }
         )
         let hosting = CalenbarPanelHostingView(rootView: panelView)
         // Give the hosting view a concrete starting frame before asking for

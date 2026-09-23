@@ -93,18 +93,22 @@ struct CalenbarGlassPanelView: View {
                 // this extra inset would be wrong.
                 .padding(4)
             } else {
+                // Deliberately compact — an empty state is the lowest-
+                // information moment in the panel and shouldn't be the
+                // visually heaviest thing in it. Sized to match a single
+                // agenda row (CalenbarAgendaRowView), not a full card.
                 HStack(spacing: 8) {
                     Image(nsImage: Self.todaysCalendarIcon)
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 18, height: 18)
+                        .frame(width: 14, height: 14)
                     Text(viewModel.emptyStateMessage ?? "")
-                        .font(.subheadline)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 18)
+                .padding(.vertical, 10)
             }
         }
         .glassEffect(.regular, in: Self.tileShape)
