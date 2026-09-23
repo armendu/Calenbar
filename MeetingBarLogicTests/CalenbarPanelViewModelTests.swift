@@ -69,20 +69,48 @@ final class CalenbarPanelViewModelTests: XCTestCase {
 
     func testPrimarySectionWithNextEventProducesSummaryAndAgenda() {
         let next = makeEvent(
+            id: "standup",
             title: "Stand Up",
             startDate: now.addingTimeInterval(4 * 60),
             endDate: now.addingTimeInterval(19 * 60)
         )
-        let state = makeState(nextEvent: next, todayEvents: [next])
+        let later = makeEvent(
+            id: "retro",
+            title: "Retro",
+            startDate: now.addingTimeInterval(3600),
+            endDate: now.addingTimeInterval(5400)
+        )
+        let state = makeState(nextEvent: next, todayEvents: [next, later])
 
         let viewModel = build(state)
 
         XCTAssertEqual(viewModel.summary?.eventTitle, "Stand Up")
         XCTAssertEqual(viewModel.summary?.sectionTitle, "Next meeting")
         XCTAssertEqual(viewModel.agenda.count, 1)
-        XCTAssertEqual(viewModel.agenda.first?.title, "Stand Up")
-        XCTAssertEqual(viewModel.agenda.first?.id, next.id)
+        XCTAssertEqual(viewModel.agenda.first?.title, "Retro")
+        XCTAssertEqual(viewModel.agenda.first?.id, later.id)
         XCTAssertNil(viewModel.emptyStateMessage)
+    }
+
+    /// The event already shown as the prominent summary card shouldn't also
+    /// repeat as the first row of the agenda list below it — that's the
+    /// same meeting rendered twice on screen for no reason.
+    func testAgendaExcludesTheNextEventToAvoidDuplicatingTheSummaryCard() {
+        let next = makeEvent(
+            id: "only-event",
+            title: "New Event",
+            startDate: now.addingTimeInterval(600),
+            endDate: now.addingTimeInterval(1800)
+        )
+        let state = makeState(nextEvent: next, todayEvents: [next])
+
+        let viewModel = build(state)
+
+        XCTAssertEqual(viewModel.summary?.eventTitle, "New Event")
+        XCTAssertTrue(
+            viewModel.agenda.isEmpty,
+            "the only event today is already shown as the summary card; the agenda list should be empty, not repeat it"
+        )
     }
 
     func testPrimarySectionWithNoUpcomingEventProducesEmptyState() {
@@ -108,6 +136,10 @@ final class CalenbarPanelViewModelTests: XCTestCase {
     }
 
     func testAgendaRowMarksCurrentlyRunningEventAsCurrent() {
+        // A running event can't be "next" (nextEvent is always upcoming), so
+        // it's a genuine agenda-list entry, not excluded like the summary's
+        // own event is — a second, later event stands in for that excluded
+        // "next" slot here.
         let running = makeEvent(
             id: "running",
             title: "Running Meeting",
@@ -125,9 +157,11 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let viewModel = build(state)
 
         let runningRow = viewModel.agenda.first { $0.id == "running" }
-        let upcomingRow = viewModel.agenda.first { $0.id == "upcoming" }
         XCTAssertEqual(runningRow?.isCurrent, true)
-        XCTAssertEqual(upcomingRow?.isCurrent, false)
+        // "upcoming" is nextEvent, so it's excluded from the agenda list
+        // (shown as the summary card instead) — confirm it's genuinely not
+        // duplicated there, rather than silently asserting nothing about it.
+        XCTAssertNil(viewModel.agenda.first { $0.id == "upcoming" })
     }
 
     func testAgendaRowAllDayEventUsesAllDayTimeRangeText() {
@@ -153,13 +187,19 @@ final class CalenbarPanelViewModelTests: XCTestCase {
     }
 
     func testAgendaRowUntitledEventFallsBackToNoTitleLabel() {
+        let next = makeEvent(
+            id: "next",
+            title: "Kickoff",
+            startDate: now.addingTimeInterval(300),
+            endDate: now.addingTimeInterval(900)
+        )
         let untitled = makeEvent(
             id: "untitled",
             title: "",
             startDate: now.addingTimeInterval(600),
             endDate: now.addingTimeInterval(1200)
         )
-        let state = makeState(nextEvent: untitled, todayEvents: [untitled])
+        let state = makeState(nextEvent: next, todayEvents: [next, untitled])
 
         let viewModel = build(state)
 
@@ -171,8 +211,12 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         utc.timeZone = TimeZone(identifier: "UTC")!
         let start = utc.date(from: DateComponents(year: 2024, month: 3, day: 1, hour: 14, minute: 30))!
         let end = start.addingTimeInterval(1800)
+        let next = makeEvent(
+            id: "next", title: "Kickoff",
+            startDate: start.addingTimeInterval(-1800), endDate: start
+        )
         let event = makeEvent(id: "timed", title: "Sync", startDate: start, endDate: end)
-        let state = makeState(nextEvent: event, todayEvents: [event], timeFormat: .twentyFourHour)
+        let state = makeState(nextEvent: next, todayEvents: [next, event], timeFormat: .twentyFourHour)
 
         let viewModel = CalenbarPanelViewModel.build(
             from: state,

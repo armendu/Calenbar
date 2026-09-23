@@ -156,7 +156,11 @@ struct CalenbarPanelViewModel: Equatable {
             labels: labels
         )
 
-        let agenda = state.todayEvents.map { event -> CalenbarAgendaRow in
+        // Excludes `next` itself: it's already shown, prominently, as the
+        // summary card above — repeating it as the first agenda row too
+        // just duplicates the same event on screen for no reason. The
+        // agenda is "everything else today," not "everything today."
+        let agenda = state.todayEvents.filter { $0.id != next.id }.map { event -> CalenbarAgendaRow in
             let time = eventTimePresentation(
                 for: event,
                 timeFormat: state.timeFormat,

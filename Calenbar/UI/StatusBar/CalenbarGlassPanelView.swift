@@ -107,7 +107,7 @@ struct CalenbarGlassPanelView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             }
         }
@@ -117,6 +117,11 @@ struct CalenbarGlassPanelView: View {
     private var agendaTile: some View {
         VStack(spacing: 0) {
             if !viewModel.agenda.isEmpty {
+                // No extra horizontal padding here beyond CalenbarAgendaRowView's
+                // own: that view already insets to 16pt to match the summary
+                // tile's left edge (its 12pt + the 4pt CalenbarGlassPanelView
+                // adds around it) — an additional wrapper here would push
+                // agenda rows further right than the summary card's text.
                 VStack(spacing: 2) {
                     ForEach(viewModel.agenda) { row in
                         CalenbarAgendaRowView(row: row) {
@@ -125,7 +130,6 @@ struct CalenbarGlassPanelView: View {
                     }
                 }
                 .padding(.top, 6)
-                .padding(.horizontal, 4)
 
                 Divider()
                     .padding(.horizontal, 12)
@@ -148,7 +152,7 @@ struct CalenbarGlassPanelView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .contentShape(Rectangle())
         }

@@ -44,7 +44,12 @@ struct CalenbarAgendaRowView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 10)
+        // Horizontal inset matches MeetingSummaryView's effective left edge
+        // in the summary tile above (its own 12pt padding + the 4pt this
+        // panel adds around it, see CalenbarGlassPanelView.summaryTile) —
+        // otherwise agenda row text starts at a different x-position than
+        // the summary card's text right above it.
+        .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
