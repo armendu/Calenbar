@@ -169,10 +169,15 @@ struct CalenbarGlassPanelView: View {
 private struct CalenbarRowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(
+            // Same reasoning as CalenbarAgendaRowView's hover fill: the
+            // background gets its own inset padding rather than shrinking
+            // the label's (full tile width) bounds, so the highlight reads
+            // as a margined rounded pill instead of a flush rectangle.
+            .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
-            )
+                    .padding(.horizontal, 6)
+            }
     }
 }
 

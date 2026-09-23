@@ -64,10 +64,17 @@ struct CalenbarAgendaRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
+        // Inset from the row's own (full-width) bounds via the background's
+        // own padding, not the row's — hit-testing/hover detection stays
+        // full-width (contentShape below), but the visible highlight reads
+        // as a rounded pill with margin on both sides, matching how macOS's
+        // own menu/list row highlights look, instead of a flush rectangle
+        // butted right up against the tile's edges.
+        .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(isHovered ? Color.primary.opacity(0.1) : Color.clear)
-        )
+                .padding(.horizontal, 6)
+        }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(row.title), \(row.timeRangeText)")
