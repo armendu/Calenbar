@@ -18,12 +18,16 @@ import SwiftUI
 /// attendees, alternate links, preferences, etc.) stays reachable via the
 /// "More…" row below, so nothing existing is lost by adding this panel.
 ///
-/// Exactly one `.glassEffect()` is applied, to the whole container. Per
-/// Apple's Liquid Glass guidance, glass is reserved for the single
-/// navigation-layer surface, not stacked on individual pieces of content
-/// inside it — so `MeetingSummaryView`'s existing accent-color capsule Join
-/// button and `CalenbarAgendaRowView`'s rows stay plain (non-glass) by
-/// design, not by oversight.
+/// Modeled on Control Center's own layout: distinct glass **tiles** for each
+/// logical group (summary, agenda) sharing one `GlassEffectContainer`,
+/// rather than one monolithic glass rectangle wrapping everything — this is
+/// what makes system glass surfaces read as a coherent group of controls
+/// instead of a single translucent card. Content *inside* each tile stays
+/// plain (non-glass): `MeetingSummaryView`'s existing accent-color capsule
+/// Join button and `CalenbarAgendaRowView`'s rows aren't independently
+/// glass, per Apple's "glass is the navigation-layer surface itself, not
+/// stacked on content within it" guidance — only the tiles that group them
+/// are.
 struct CalenbarGlassPanelView: View {
     let viewModel: CalenbarPanelViewModel
     let onJoin: () -> Void
@@ -35,71 +39,110 @@ struct CalenbarGlassPanelView: View {
     /// can't silently drift out of alignment if one changes.
     static let width: CGFloat = MeetingSummaryView.preferredWidth
 
-    @State private var isMoreHovered = false
+    private static let tileShape = RoundedRectangle(cornerRadius: 20, style: .continuous)
 
     var body: some View {
-        GlassEffectContainer {
-            VStack(alignment: .leading, spacing: 6) {
-                if let summary = viewModel.summary {
-                    MeetingSummaryView(
-                        presentation: summary,
-                        providerIcon: getIconForMeetingService(summary.meetingService),
-                        onJoin: onJoin
-                    )
-                } else {
-                    Text(viewModel.emptyStateMessage ?? "")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 16)
-                }
-
-                if !viewModel.agenda.isEmpty {
-                    Divider()
-                        .padding(.horizontal, 8)
-                    VStack(spacing: 0) {
-                        ForEach(viewModel.agenda) { row in
-                            CalenbarAgendaRowView(row: row) {
-                                onSelectAgendaRow(row)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Divider()
-                    .padding(.horizontal, 8)
-                moreRow
+        GlassEffectContainer(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
+                summaryTile
+                // Always shown, even with an empty agenda: it's the only
+                // path to the classic menu (the "More…" row), so it can't
+                // be conditional on there being agenda rows to display.
+                agendaTile
             }
-            .padding(.vertical, 6)
         }
-        .glassEffect(.regular, in: .rect(cornerRadius: 20))
         .frame(width: Self.width)
         .accessibilityElement(children: .contain)
     }
 
+    private var summaryTile: some View {
+        Group {
+            if let summary = viewModel.summary {
+                MeetingSummaryView(
+                    presentation: summary,
+                    providerIcon: getIconForMeetingService(summary.meetingService),
+                    onJoin: onJoin
+                )
+                // MeetingSummaryView's own padding (12h/6v) was tuned for a
+                // flat NSMenuItem row with square corners, not for being the
+                // sole content of a 20pt continuous-corner glass tile —
+                // without this, its text/icon would sit right at the
+                // rounded edge. Added here rather than in the shared file,
+                // since MeetingSummaryView is also used as-is inside the
+                // classic NSMenu (MenuBuilder.makeMeetingSummaryItem), where
+                // this extra inset would be wrong.
+                .padding(4)
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                    Text(viewModel.emptyStateMessage ?? "")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 18)
+            }
+        }
+        .glassEffect(.regular, in: Self.tileShape)
+    }
+
+    private var agendaTile: some View {
+        VStack(spacing: 0) {
+            if !viewModel.agenda.isEmpty {
+                VStack(spacing: 2) {
+                    ForEach(viewModel.agenda) { row in
+                        CalenbarAgendaRowView(row: row) {
+                            onSelectAgendaRow(row)
+                        }
+                    }
+                }
+                .padding(.top, 6)
+                .padding(.horizontal, 4)
+
+                Divider()
+                    .padding(.horizontal, 12)
+                    .padding(.top, 2)
+            }
+            moreRow
+        }
+        .padding(.bottom, 4)
+        .glassEffect(.regular, in: Self.tileShape)
+    }
+
     private var moreRow: some View {
-        HStack {
-            Text("calenbar_panel_more".loco())
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
+        Button(action: onShowClassicMenu) {
+            HStack(spacing: 6) {
+                Text("calenbar_panel_more".loco())
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isMoreHovered ? Color.primary.opacity(0.1) : Color.clear)
-        )
-        .onHover { hovering in
-            isMoreHovered = hovering
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
-        .onTapGesture(perform: onShowClassicMenu)
+        .buttonStyle(CalenbarRowButtonStyle())
         .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
         .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
+    }
+}
+
+/// Shared hover/press affordance for plain (non-glass) rows sitting inside a
+/// glass tile — a subtle fill, not another material, so it doesn't compete
+/// with the tile's own glass. Matches `CalenbarAgendaRowView`'s existing
+/// hover treatment so every row in the panel feels like the same control.
+private struct CalenbarRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+            )
     }
 }
 
