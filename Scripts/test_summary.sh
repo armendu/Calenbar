@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-BUNDLE="${1:-build/coverage/MeetingBar.xcresult}"
+BUNDLE="${1:-build/coverage/Calenbar.xcresult}"
 
 if [ ! -d "$BUNDLE" ]; then
     echo "_No app test results found._"

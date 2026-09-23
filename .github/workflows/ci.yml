@@ -54,7 +54,7 @@ jobs:
             build/SourcePackages
             ~/Library/Caches/org.swift.swiftpm
             ~/Library/org.swift.swiftpm
-          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift', 'MeetingBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.swift', 'Calenbar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-spm-
 
@@ -71,7 +71,7 @@ jobs:
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: always()
         with:
-          name: MeetingBar Tests
+          name: Calenbar Tests
           path: build/test-results/*.xml
           reporter: java-junit
 
@@ -116,8 +116,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: MeetingBar.xcresult
-          path: build/coverage/MeetingBar.xcresult
+          name: Calenbar.xcresult
+          path: build/coverage/Calenbar.xcresult
           if-no-files-found: ignore
           retention-days: 7
 
