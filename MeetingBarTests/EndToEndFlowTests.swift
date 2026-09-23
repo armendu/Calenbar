@@ -22,7 +22,7 @@ import SwiftUI
 import UserNotifications
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 // MARK: - Harness
 
@@ -931,13 +931,12 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
             $0.identifier == MenuBuilder.meetingSummaryItemIdentifier
         })
         // …and the status bar shows the "done for today" state, not the event:
-        // empty title with the calendar-checkmark glyph.
+        // empty title with today's-date glyph (the real Calendar.app icon,
+        // via NSWorkspace — not a static named asset, so its .name() isn't
+        // comparable; just confirm an icon was actually set).
         let button = try renderTitle(harness)
         XCTAssertEqual(button.attributedTitle.string, "")
-        XCTAssertEqual(
-            button.image?.name(),
-            MenuStyleConstants.iconNamed(MenuStyleConstants.calendarCheckmarkIconName).name()
-        )
+        XCTAssertNotNil(button.image)
     }
 
     func testNetworkLossKeepsCachedEventsAndShowsStaleWarning() async throws {

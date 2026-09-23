@@ -11,7 +11,7 @@ import Defaults
 import SwiftUI
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class MenuBuilderTests: BaseTestCase {
@@ -1453,6 +1453,23 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         )
     }
 
+    func test_renderStatusBarShowsTodaysDateIconForNoUpcomingMode() throws {
+        let controller = StatusBarItemController()
+        defer { NSStatusBar.system.removeStatusItem(controller.statusItem) }
+
+        controller.renderStatusBar(makePresentation(mode: .noUpcoming, icon: .todaysDate))
+
+        let button = try XCTUnwrap(controller.statusItem.button)
+        // NSWorkspace.shared.icon(forFile:) vends a fresh, unnamed NSImage on
+        // each call, so identity/name comparison isn't meaningful here (see
+        // MenuStyleConstants.todaysCalendarIcon) — confirm an icon was set,
+        // at the size the renderer applies to every status bar icon, and
+        // that .imageLeft is used (not .noImage, which would hide it).
+        XCTAssertNotNil(button.image)
+        XCTAssertEqual(button.image?.size, MenuStyleConstants.iconSize)
+        XCTAssertEqual(button.imagePosition, .imageLeft)
+    }
+
     func test_renderStatusBarUsesFallbackForHiddenEventTitleWithoutIcon() throws {
         let controller = StatusBarItemController()
         defer { NSStatusBar.system.removeStatusItem(controller.statusItem) }
@@ -1699,5 +1716,16 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         )
         event.participationStatus = participationStatus
         return event
+    }
+
+    func test_todaysCalendarIconReturnsAValidNonEmptyImage() {
+        let icon = MenuStyleConstants.todaysCalendarIcon
+        // Confirms the NSWorkspace lookup (or its SF Symbol fallback) always
+        // produces something renderable, never a degenerate 0x0/1x1 image —
+        // Calendar.app should always be present on macOS, but this also
+        // covers the fallback path if it's ever missing/renamed.
+        XCTAssertGreaterThan(icon.size.width, 1)
+        XCTAssertGreaterThan(icon.size.height, 1)
+        XCTAssertFalse(icon.representations.isEmpty)
     }
 }

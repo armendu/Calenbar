@@ -32,6 +32,22 @@ enum MenuStyleConstants {
         }
         return NSImage(size: NSSize(width: 1, height: 1))
     }
+
+    /// The real Calendar.app icon, which macOS renders with today's actual
+    /// date baked in — used wherever the app wants a "today" glyph (the
+    /// status bar's no-upcoming-events icon, the glass panel's empty state)
+    /// instead of a static checkmark/calendar asset.
+    static var todaysCalendarIcon: NSImage {
+        let candidatePaths = [
+            "/System/Applications/Calendar.app",
+            "/Applications/Calendar.app"
+        ]
+        for path in candidatePaths where FileManager.default.fileExists(atPath: path) {
+            return NSWorkspace.shared.icon(forFile: path)
+        }
+        return NSImage(systemSymbolName: "calendar", accessibilityDescription: nil)
+            ?? iconNamed(calendarIconName)
+    }
 }
 
 struct StatusBarDependencies {
@@ -284,6 +300,9 @@ final class StatusBarItemController {
             button.image?.size = MenuStyleConstants.iconSize
         case .meetingService(let service):
             button.image = getIconForMeetingService(service)
+        case .todaysDate:
+            button.image = MenuStyleConstants.todaysCalendarIcon
+            button.image?.size = MenuStyleConstants.iconSize
         case .none:
             break
         }

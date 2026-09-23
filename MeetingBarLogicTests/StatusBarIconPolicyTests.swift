@@ -57,10 +57,10 @@ final class StatusBarIconPolicyTests: XCTestCase {
         XCTAssertEqual(icon(mode: .noUpcoming, format: .appicon), .asset(assets.appIcon))
     }
 
-    func testNoUpcomingNonAppIconFormatsReturnCalendarCheckmark() {
-        XCTAssertEqual(icon(mode: .noUpcoming, format: .calendar), .asset(assets.calendarCheckmark))
-        XCTAssertEqual(icon(mode: .noUpcoming, format: .eventtype), .asset(assets.calendarCheckmark))
-        XCTAssertEqual(icon(mode: .noUpcoming, format: .none), .asset(assets.calendarCheckmark))
+    func testNoUpcomingNonAppIconFormatsReturnTodaysDate() {
+        XCTAssertEqual(icon(mode: .noUpcoming, format: .calendar), .todaysDate)
+        XCTAssertEqual(icon(mode: .noUpcoming, format: .eventtype), .todaysDate)
+        XCTAssertEqual(icon(mode: .noUpcoming, format: .none), .todaysDate)
     }
 
     // MARK: - afterThreshold

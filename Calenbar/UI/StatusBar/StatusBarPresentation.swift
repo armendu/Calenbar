@@ -333,6 +333,10 @@ enum StatusBarIconFormat: Equatable {
 enum StatusBarIcon: Equatable {
     case asset(String)
     case meetingService(MeetingServices?)
+    /// The real Calendar.app icon, which macOS renders with today's actual
+    /// date on it — the renderer resolves this via
+    /// `MenuStyleConstants.todaysCalendarIcon`, not a static named asset.
+    case todaysDate
     case none
 }
 
@@ -354,7 +358,7 @@ struct StatusBarIconAssets: Equatable {
 /// | ---------------- | --------------------------- | ------------------- |
 /// | idle             | (any)                       | app icon            |
 /// | noUpcoming       | appicon                     | app icon            |
-/// | noUpcoming       | calendar / eventtype / none | calendar-checkmark  |
+/// | noUpcoming       | calendar / eventtype / none | today's date        |
 /// | afterThreshold   | appicon                     | app icon            |
 /// | afterThreshold   | calendar / eventtype / none | calendar            |
 /// | nextEvent        | none                        | no icon             |
@@ -374,7 +378,7 @@ enum StatusBarIconPolicy {
         case .noUpcoming:
             return format == .appicon
                 ? .asset(assets.appIcon)
-                : .asset(assets.calendarCheckmark)
+                : .todaysDate
         case .afterThreshold:
             return format == .appicon
                 ? .asset(assets.appIcon)
