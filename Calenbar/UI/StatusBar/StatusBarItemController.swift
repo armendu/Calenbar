@@ -48,6 +48,22 @@ enum MenuStyleConstants {
         return NSImage(systemSymbolName: "calendar", accessibilityDescription: nil)
             ?? iconNamed(calendarIconName)
     }
+
+    /// Returns a copy of `image` widened by `gap` points of transparent
+    /// space on its trailing edge, so a title drawn immediately after it
+    /// (`NSStatusBarButton.imagePosition == .imageLeft`) has visual
+    /// breathing room instead of butting directly against the icon.
+    /// Preserves `isTemplate` so template icons keep auto-tinting with the
+    /// menu bar's light/dark appearance.
+    static func iconWithTrailingGap(_ image: NSImage, gap: CGFloat) -> NSImage {
+        let newSize = NSSize(width: image.size.width + gap, height: image.size.height)
+        let padded = NSImage(size: newSize, flipped: false) { rect in
+            image.draw(in: NSRect(origin: .zero, size: image.size))
+            return true
+        }
+        padded.isTemplate = image.isTemplate
+        return padded
+    }
 }
 
 struct StatusBarDependencies {
@@ -311,6 +327,19 @@ final class StatusBarItemController {
         }
 
         ensureStatusBarButtonIsVisible(button)
+
+        // A title is about to be drawn right after the icon with no gap —
+        // widen the icon's own canvas with transparent trailing space so
+        // the title doesn't butt directly against it. Done at the image
+        // level, not by padding the title string: a leading space on the
+        // title changes what "the button's title" *is* (breaking `hasPrefix`
+        // and exact-match assertions across the test suite, and a
+        // paragraph-style indent was tried and reverted — it shifted the
+        // text's drawn position without growing the button's computed
+        // width to match, silently clipping the tail of longer titles).
+        if button.imagePosition == .imageLeft, !button.attributedTitle.string.isEmpty {
+            button.image = button.image.map { MenuStyleConstants.iconWithTrailingGap($0, gap: 4) }
+        }
     }
 
     private func ensureStatusBarButtonIsVisible(_ button: NSStatusBarButton) {
@@ -610,23 +639,13 @@ enum StatusBarTitleRenderer {
         return title
     }
 
-    /// NSStatusBarButton's `imagePosition = .imageLeft` butts the title
-    /// directly against the icon with no configurable gap, reading as
-    /// cramped. A small head indent on the title's paragraph style nudges
-    /// the text away from the icon without affecting the icon itself.
-    private static let iconTitleGap: CGFloat = 4
-
     private static func titleAttributes(
         style: StatusBarTitleStyle,
         font: NSFont,
         baselineOffset: CGFloat? = nil
     ) -> [NSAttributedString.Key: Any] {
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.firstLineHeadIndent = iconTitleGap
-        paragraphStyle.headIndent = iconTitleGap
         var attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .paragraphStyle: paragraphStyle
+            .font: font
         ]
         if let baselineOffset {
             attributes[.baselineOffset] = baselineOffset
