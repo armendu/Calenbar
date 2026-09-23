@@ -17,7 +17,7 @@ struct MeetingSummaryView: View {
 
     @State private var isHovered = false
 
-    static let preferredWidth: CGFloat = 380
+    static let preferredWidth: CGFloat = 320
     static let preferredHeight: CGFloat = 66
 
     var body: some View {
@@ -64,11 +64,11 @@ struct MeetingSummaryView: View {
         // menu. An unbounded .infinity here reports back a huge "ideal"
         // width (the same NSHostingView.fittingSize unreliability already
         // found for the glass panel in CalenbarPanelController), stretching
-        // the entire classic menu far past its intended 380pt. Deliberately
+        // the entire classic menu far past its intended 320pt. Deliberately
         // NOT a rigid minWidth+maxWidth pin, though: this view is reused
         // inside the glass panel's summary tile (CalenbarGlassPanelView),
-        // which only has ~372pt available after its own padding — a rigid
-        // 380pt there overflows the tile's rounded shape on one side. A
+        // which only has ~312pt available after its own padding — a rigid
+        // 320pt there overflows the tile's rounded shape on one side. A
         // bare maxWidth caps the runaway-ideal-size case while still
         // shrinking to fit whatever narrower width it's actually given.
         .frame(

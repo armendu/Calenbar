@@ -193,7 +193,7 @@ struct DayRelativeTimelineView: View {
         // and NSMenu consults NSHostingView.fittingSize to size the whole
         // menu. An unbounded .infinity here reports back a huge "ideal"
         // width, stretching the entire classic menu far past its intended
-        // 380pt — the same NSHostingView.fittingSize unreliability already
+        // 320pt — the same NSHostingView.fittingSize unreliability already
         // found for the glass panel in CalenbarPanelController.
         .frame(width: MeetingSummaryView.preferredWidth)
         .accessibilityLabel("timeline_accessibility_label".loco(segments.count))

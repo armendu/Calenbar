@@ -94,7 +94,7 @@ final class CalenbarPanelController: NSObject {
         // this view: GlassEffectContainer content can report an "ideal"
         // intrinsic width that ignores CalenbarGlassPanelView's own
         // `.frame(width:)` constraint, producing a panel that stretched to
-        // fill most of the screen instead of staying at the intended 380pt.
+        // fill most of the screen instead of staying at the intended 320pt.
         // The width is a compile-time-known constant regardless — only ask
         // fittingSize for the height, measured at that fixed width.
         let targetWidth = CalenbarGlassPanelView.width
