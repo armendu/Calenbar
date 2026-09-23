@@ -19,18 +19,30 @@ struct CalenbarAgendaRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // A small live dot reads faster than the icon/weight change alone
-            // for "this is happening right now" — same visual language as
-            // the running-meeting indicator system Calendar widgets use.
-            Circle()
-                .fill(row.isCurrent ? Color.accentColor : Color.clear)
-                .frame(width: 5, height: 5)
+            // Both the live dot and the service icon are only added to the
+            // layout when they have something real to show. They used to be
+            // always-present but invisible (Color.clear / the generic
+            // "no_online_session" glyph) to keep row content vertically
+            // aligned — on device that just reserved ~35pt of blank space
+            // before the title for every event without a detected video
+            // link, reading as a large, unexplained left margin.
+            if row.isCurrent {
+                // A small live dot reads faster than the icon/weight change
+                // alone for "this is happening right now" — same visual
+                // language as the running-meeting indicator system Calendar
+                // widgets use.
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 5, height: 5)
+            }
 
-            Image(nsImage: getIconForMeetingService(row.meetingService))
-                .resizable()
-                .scaledToFit()
-                .frame(width: 14, height: 14)
-                .opacity(row.isCurrent ? 1 : 0.7)
+            if let service = row.meetingService {
+                Image(nsImage: getIconForMeetingService(service))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+                    .opacity(row.isCurrent ? 1 : 0.7)
+            }
 
             Text(row.title)
                 .font(.subheadline.weight(row.isCurrent ? .semibold : .regular))
