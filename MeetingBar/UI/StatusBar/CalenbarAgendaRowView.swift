@@ -48,7 +48,7 @@ struct CalenbarAgendaRowView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(row.title), \(row.timeRangeText)")
-        .accessibilityHint(onSelect != nil ? "Double tap to open" : "")
+        .accessibilityHint(onSelect != nil ? "calenbar_panel_agenda_row_accessibility_hint".loco() : "")
         .onHover { hovering in
             isHovered = hovering
             guard onSelect != nil else { return }

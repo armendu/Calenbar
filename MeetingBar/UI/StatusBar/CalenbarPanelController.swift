@@ -18,10 +18,21 @@ import SwiftUI
 /// rather than being bound to right-click, so every existing feature that
 /// only lives in the classic menu stays reachable — right-click's shortcut
 /// just isn't sacrificed to make room for it.
+/// `NSHostingView` subclass that accepts the first mouse click. The panel
+/// deliberately never becomes key (see `show`), and AppKit's default
+/// `acceptsFirstMouse(for:)` is `false` — without this override, every click
+/// inside a permanently-non-key panel (Join, an agenda row, "More…") would
+/// be swallowed just to activate the panel's window, requiring a second
+/// click to actually register. This is the standard fix for this well-known
+/// AppKit gotcha with custom status-item popups.
+private final class CalenbarPanelHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 @MainActor
 final class CalenbarPanelController: NSObject {
     private var panel: NSPanel?
-    private var hostingView: NSHostingView<CalenbarGlassPanelView>?
+    private var hostingView: CalenbarPanelHostingView<CalenbarGlassPanelView>?
     private var globalClickMonitor: Any?
     private var localKeyMonitor: Any?
 
@@ -78,14 +89,15 @@ final class CalenbarPanelController: NSObject {
             onSelectAgendaRow: { [weak self] row in onSelectAgendaRow(row); self?.dismiss() },
             onShowClassicMenu: { [weak self] in onShowClassicMenu(); self?.dismiss() }
         )
-        let hosting = NSHostingView(rootView: panelView)
+        let hosting = CalenbarPanelHostingView(rootView: panelView)
         // Give the hosting view a concrete starting frame before asking for
-        // fittingSize — verified empirically (not assumed) that this
-        // produces a correct, non-zero size for this panel's fixed-width /
-        // natural-height layout even pre-attachment to a window, but we
-        // still size the frame explicitly first as defense in depth: SwiftUI
-        // layout is generally undefined before a view has an established
-        // frame to lay out within.
+        // fittingSize. A standalone (non-windowed) compile-time check during
+        // development showed this producing a correct, non-zero size for
+        // this panel's fixed-width/natural-height layout even
+        // pre-attachment to a window — but that check never ran inside a
+        // real app/window server, so treat this as "expected to work," not
+        // confirmed: verify fittingSize's actual runtime value the first
+        // time this runs on a device, before trusting it further.
         hosting.frame = NSRect(x: 0, y: 0, width: CalenbarGlassPanelView.width, height: 1)
         let fitSize = hosting.fittingSize
         hosting.frame = NSRect(origin: .zero, size: fitSize)
@@ -142,44 +154,29 @@ final class CalenbarPanelController: NSObject {
         hostingView = nil
     }
 
-    /// `ignoring button`: the global monitor fires on mouse-down anywhere,
-    /// including on the status item button itself — without excluding it,
-    /// clicking the button to close an open panel would both (a) dismiss via
-    /// this monitor and (b) immediately reopen via
-    /// `StatusBarItemController.statusMenuBarAction`'s own click handling,
-    /// which would look like the panel never closed. `toggle(...)` already
-    /// handles the "click while open → close" case itself, so this monitor
-    /// only needs to handle *outside* clicks; a click landing back on the
-    /// status item is deliberately left to `toggle`, not double-handled here.
+    /// `ignoring button`: `toggle()` already handles "click the status item
+    /// again to close," so this monitor only needs to handle *outside*
+    /// clicks. Global monitors only observe events sent to other
+    /// applications (per Apple's docs), so a click on our own status item
+    /// button likely never reaches this handler in the first place — the
+    /// `clickedStatusItemButton` guard below may be belt-and-suspenders
+    /// rather than load-bearing; kept for now, worth re-checking once this
+    /// can be click-tested on a device.
     private func installDismissalMonitors(ignoring button: NSStatusBarButton) {
-        // .keyDown is included here (not just click events) because the
-        // panel deliberately never becomes key (.nonactivatingPanel +
-        // orderFrontRegardless(), not makeKeyAndOrderFront — see `show`).
-        // With the panel non-key, the actual key window stays whatever other
-        // app's window was key before the status item was clicked, so an Esc
-        // press is delivered to THAT app, not to us — a *local* monitor
-        // (which only observes events sent to this app) would never see it.
-        // A *global* monitor observes events delivered to other
-        // applications, which is exactly why the existing click-outside
-        // handling below already has to use one; the same reasoning applies
-        // to Esc, so both live on one global monitor rather than pairing a
-        // global click monitor with a local key monitor that would rarely
-        // fire in practice.
+        // Esc is handled on the *global* monitor, not a local one: this
+        // panel deliberately never becomes key (see `show`), so the real key
+        // window stays whatever other app's window was key before — a local
+        // monitor (events sent to this app) wouldn't see an Esc press
+        // delivered there. A global monitor (events sent to other apps) is
+        // exactly why click-outside detection below already needed one; Esc
+        // rides along on the same monitor for the same reason.
         //
-        // CAVEAT (found in review, not yet resolved — needs a real device
-        // to test): unlike global *mouse* monitors, which are unrestricted,
-        // a global monitor for *keyboard* events only delivers callbacks if
-        // the app has been granted Input Monitoring permission (System
-        // Settings → Privacy & Security → Input Monitoring). Nothing in
-        // this app requests or checks for that permission, so on a typical
-        // first run this global .keyDown branch likely never fires — no
-        // crash, just a silent no-op — and Esc-to-dismiss may not actually
-        // work out of the box despite this code being logically correct.
-        // The four other dismissal paths (click-outside, re-click,
-        // app-resign-key, sleep, lock) don't depend on this permission and
-        // remain reliable regardless. Verify Esc's real-world behavior once
-        // this can be run on a device, and decide then whether to prompt
-        // for Input Monitoring or accept Esc as best-effort-only.
+        // CAVEAT, unresolved — needs a real device to confirm: global
+        // *keyboard* monitors (unlike mouse ones) require the user to have
+        // granted Input Monitoring (System Settings → Privacy & Security).
+        // Nothing here requests that permission, so this Esc path likely
+        // silently no-ops on a typical first run. The other four dismissal
+        // triggers don't depend on it and stay reliable regardless.
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self, weak button] event in
             guard let self else { return }
             if event.type == .keyDown {
@@ -191,10 +188,9 @@ final class CalenbarPanelController: NSObject {
             guard !clickedStatusItemButton else { return }
             self.dismiss()
         }
-        // Defensive fallback: a global monitor cannot observe events sent to
-        // this app itself, so this covers the (normally unreachable, since
-        // the panel isn't key) case where Esc somehow does land locally —
-        // harmless to keep, and swallows the event when it does apply.
+        // Defensive fallback for the (normally unreachable, since the panel
+        // isn't key) case where Esc somehow lands locally — harmless to
+        // keep, global monitors can't cover events sent to this app itself.
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             if event.keyCode == kVK_Escape {
@@ -211,14 +207,14 @@ final class CalenbarPanelController: NSObject {
             self, selector: #selector(dismissFromNotification),
             name: NSWorkspace.screensDidSleepNotification, object: nil
         )
-        // Screen *lock* (e.g. Cmd+Ctrl+Q) is a distinct event from sleep,
-        // delivered on the distributed notification center rather than
-        // NSWorkspace's — without this, locking the screen while the panel
-        // is open would leave it visibly on-screen over the lock screen.
-        DistributedNotificationCenter.default().addObserver(
-            self, selector: #selector(dismissFromNotification),
-            name: Notification.Name("com.apple.screenIsLocked"), object: nil
-        )
+        // Screen *lock* is a distinct event from sleep, and is NOT handled
+        // here: the app already listens for it once, in
+        // LifecycleObserver/AppDelegate ("com.apple.screenIsLocked",
+        // forwarded as onScreenLocked), which now also calls
+        // calenbarPanelController.dismiss(). A second independent listener
+        // for the same fragile, string-keyed, undocumented system
+        // notification here would risk silently diverging from that one if
+        // either copy ever changed — better to have exactly one owner of it.
     }
 
     private func removeDismissalMonitors() {
@@ -228,7 +224,6 @@ final class CalenbarPanelController: NSObject {
         localKeyMonitor = nil
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
-        DistributedNotificationCenter.default().removeObserver(self)
     }
 
     @objc private func dismissFromNotification() {

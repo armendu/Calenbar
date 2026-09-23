@@ -30,7 +30,10 @@ struct CalenbarGlassPanelView: View {
     let onSelectAgendaRow: (CalenbarAgendaRow) -> Void
     let onShowClassicMenu: () -> Void
 
-    static let width: CGFloat = 380
+    /// Shares `MeetingSummaryView.preferredWidth` rather than a second
+    /// independent literal, so the panel and its embedded summary card
+    /// can't silently drift out of alignment if one changes.
+    static let width: CGFloat = MeetingSummaryView.preferredWidth
 
     @State private var isMoreHovered = false
 
@@ -78,7 +81,7 @@ struct CalenbarGlassPanelView: View {
 
     private var moreRow: some View {
         HStack {
-            Text("More…")
+            Text("calenbar_panel_more".loco())
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -95,8 +98,8 @@ struct CalenbarGlassPanelView: View {
             if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
         .onTapGesture(perform: onShowClassicMenu)
-        .accessibilityLabel("More options")
-        .accessibilityHint("Opens the full menu")
+        .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
+        .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
     }
 }
 

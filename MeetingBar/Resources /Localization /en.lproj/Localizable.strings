@@ -271,6 +271,10 @@
 "status_bar_control_select_calendars" = "Select Calendars in Preferences";
 "status_bar_control_refresh_failed" = "Calendar refresh failed";
 "status_bar_control_no_upcoming" = "No upcoming meetings";
+"calenbar_panel_more" = "More…";
+"calenbar_panel_more_accessibility_label" = "More options";
+"calenbar_panel_more_accessibility_hint" = "Opens the full menu";
+"calenbar_panel_agenda_row_accessibility_hint" = "Double tap to open";
 "status_bar_section_bookmarks_title" = "Bookmarks";
 "status_bar_section_bookmarks_menu" = "Bookmarks menu";
 "status_bar_section_date_nothing" = "Nothing for %@";

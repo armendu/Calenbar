@@ -176,6 +176,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         lifecycleObserver.onScreenLocked = { [weak self] in
             self?.appModel?.handleScreenLock()
+            self?.statusBarItem.calenbarPanelController.dismiss()
         }
         lifecycleObserver.onScreenUnlocked = { [weak self] in
             self?.appModel?.handleScreenUnlock()
