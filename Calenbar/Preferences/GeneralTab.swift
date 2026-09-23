@@ -106,7 +106,7 @@ struct PatronageAppSection: View {
                     .frame(width: 72, height: 72)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("MeetingBar")
+                        Text("Calenbar")
                             .font(.title2).bold()
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
                             .font(.callout)

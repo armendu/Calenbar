@@ -189,7 +189,7 @@ final class WindowCoordinator {
 
         window.titlebarAppearsTransparent = true
         window.styleMask.insert(.fullSizeContentView)
-        window.title = "Meetingbar Fullscreen Notification"
+        window.title = "Calenbar Fullscreen Notification"
         window.level = .screenSaver
 
         let controller = NSWindowController(window: window)
