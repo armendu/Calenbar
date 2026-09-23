@@ -68,22 +68,17 @@ struct CalenbarAgendaRowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Inset from the row's own (full-width) bounds via the background's
-        // own padding, not the row's — hit-testing/hover detection stays
-        // full-width (contentShape below), but the visible highlight reads
-        // as a rounded pill with margin on both sides, matching how macOS's
-        // own menu/list row highlights look, instead of a flush rectangle
-        // butted right up against the tile's edges.
-        .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isHovered ? Color.primary.opacity(0.1) : Color.clear)
-                .padding(.horizontal, 6)
-        }
+        // Shared with the "More…" row (see CalenbarGlassPanelView) so every
+        // row in the panel hovers identically — an inset rounded pill, not a
+        // flush rectangle butted against the tile's straight edges.
+        .calenbarRowHoverHighlight(isHovered)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(row.title), \(row.timeRangeText)")
         .accessibilityHint(onSelect != nil ? "calenbar_panel_agenda_row_accessibility_hint".loco() : "")
-        .onHover { hovering in
+        // Reliable NSTrackingArea-based hover (see CalenbarGlassPanelView) —
+        // SwiftUI's own .onHover fires inconsistently in this never-key panel.
+        .calenbarRowHover { hovering in
             isHovered = hovering
             guard onSelect != nil else { return }
             if hovering {

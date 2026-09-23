@@ -142,42 +142,113 @@ struct CalenbarGlassPanelView: View {
     }
 
     private var moreRow: some View {
-        Button(action: onShowClassicMenu) {
-            HStack(spacing: 6) {
-                Text("calenbar_panel_more".loco())
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(CalenbarRowButtonStyle())
-        .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
-        .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
+        MoreRow(onShowClassicMenu: onShowClassicMenu)
     }
 }
 
-/// Shared hover/press affordance for plain (non-glass) rows sitting inside a
-/// glass tile — a subtle fill, not another material, so it doesn't compete
-/// with the tile's own glass. Matches `CalenbarAgendaRowView`'s existing
-/// hover treatment so every row in the panel feels like the same control.
-private struct CalenbarRowButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            // Same reasoning as CalenbarAgendaRowView's hover fill: the
-            // background gets its own inset padding rather than shrinking
-            // the label's (full tile width) bounds, so the highlight reads
-            // as a margined rounded pill instead of a flush rectangle.
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
-                    .padding(.horizontal, 6)
-            }
+/// The "More…" row. A plain hover-aware row (not a `Button` + `ButtonStyle`):
+/// a ButtonStyle only exposes `isPressed`, so the previous version had no
+/// hover state at all — the row lit up only for the instant of a click. This
+/// mirrors `CalenbarAgendaRowView` exactly so both rows in the panel share
+/// one hover affordance.
+private struct MoreRow: View {
+    let onShowClassicMenu: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("calenbar_panel_more".loco())
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .calenbarRowHoverHighlight(isHovered)
+        .contentShape(Rectangle())
+        .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
+        .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
+        .calenbarRowHover { hovering in
+            isHovered = hovering
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        .onTapGesture(perform: onShowClassicMenu)
+    }
+}
+
+/// Shared hover fill for the panel's plain (non-glass) rows — an inset
+/// rounded pill, so the highlight sits well inside the glass tile's rounded
+/// corners rather than as a flush rectangle butted against its straight
+/// edges. Insets on all four sides and uses a large radius so it reads
+/// clearly as a rounded pill, not a band. Applied identically by
+/// `CalenbarAgendaRowView` and `MoreRow` so every row hovers the same way.
+extension View {
+    func calenbarRowHoverHighlight(_ isHovered: Bool) -> some View {
+        background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.primary.opacity(isHovered ? 0.15 : 0))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+        }
+    }
+}
+
+/// Reliable hover detection for views inside the glass panel.
+///
+/// SwiftUI's own `.onHover` installs a tracking area whose activation is
+/// tied to the window being key/active. This panel is a `.nonactivatingPanel`
+/// that deliberately never becomes key (see `CalenbarPanelController`), so
+/// `.onHover` fires inconsistently — the highlight would stick, or not
+/// appear until the whole app happened to be active. An explicit
+/// `NSTrackingArea` with `.activeAlways` fires mouse enter/exit regardless of
+/// key/active state, which is exactly what a status-bar popup needs. The
+/// backing view hit-tests as transparent so taps still reach SwiftUI.
+extension View {
+    func calenbarRowHover(_ onChange: @escaping (Bool) -> Void) -> some View {
+        overlay(CalenbarHoverTracker(onChange: onChange))
+    }
+}
+
+private struct CalenbarHoverTracker: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = TrackingView()
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? TrackingView)?.onChange = onChange
+    }
+
+    final class TrackingView: NSView {
+        var onChange: ((Bool) -> Void)?
+        private var trackingArea: NSTrackingArea?
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = trackingArea { removeTrackingArea(existing) }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            trackingArea = area
+        }
+
+        override func mouseEntered(with event: NSEvent) { onChange?(true) }
+        override func mouseExited(with event: NSEvent) { onChange?(false) }
+
+        // Transparent to clicks: the SwiftUI content underneath keeps its
+        // own tap handling; this overlay only observes the pointer.
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
     }
 }
 
