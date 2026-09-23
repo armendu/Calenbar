@@ -21,13 +21,13 @@
 			containerPortal = 144C01712462D0C3000C9FFC /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 144C01782462D0C3000C9FFC;
-			remoteInfo = MeetingBar;
+			remoteInfo = Calenbar;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		14158D3A246C65AD0006436C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		144C01792462D0C3000C9FFC /* MeetingBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MeetingBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		144C01792462D0C3000C9FFC /* Calenbar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Calenbar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		14619A1B25EC26DF00F3098F /* MeetingBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MeetingBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40DC7053250E5E1000217DD9 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -38,7 +38,7 @@
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 144C01782462D0C3000C9FFC /* MeetingBar */;
+			target = 144C01782462D0C3000C9FFC /* Calenbar */;
 		};
 		37AF6E5D2DAEEF1800F38307 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -50,7 +50,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		37826AE02DAEFAAD00A6BFF8 /* MeetingBar */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (37826B092DAEFAAD00A6BFF8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = MeetingBar; sourceTree = "<group>"; };
+		37826AE02DAEFAAD00A6BFF8 /* Calenbar */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (37826B092DAEFAAD00A6BFF8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Calenbar; sourceTree = "<group>"; };
 		37AF6E1A2DAEEEE900F38307 /* XCConfig */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = XCConfig; sourceTree = "<group>"; };
 		37AF6E582DAEEF1800F38307 /* MeetingBarTests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (37AF6E5D2DAEEF1800F38307 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = MeetingBarTests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -84,7 +84,7 @@
 			children = (
 				14158D3A246C65AD0006436C /* README.md */,
 				37AF6E1A2DAEEEE900F38307 /* XCConfig */,
-				37826AE02DAEFAAD00A6BFF8 /* MeetingBar */,
+				37826AE02DAEFAAD00A6BFF8 /* Calenbar */,
 				37AF6E582DAEEF1800F38307 /* MeetingBarTests */,
 				144C017A2462D0C3000C9FFC /* Products */,
 				40DC7052250E5E1000217DD9 /* Frameworks */,
@@ -94,7 +94,7 @@
 		144C017A2462D0C3000C9FFC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				144C01792462D0C3000C9FFC /* MeetingBar.app */,
+				144C01792462D0C3000C9FFC /* Calenbar.app */,
 				14619A1B25EC26DF00F3098F /* MeetingBarTests.xctest */,
 			);
 			name = Products;
@@ -111,9 +111,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		144C01782462D0C3000C9FFC /* MeetingBar */ = {
+		144C01782462D0C3000C9FFC /* Calenbar */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 144C018C2462D0C5000C9FFC /* Build configuration list for PBXNativeTarget "MeetingBar" */;
+			buildConfigurationList = 144C018C2462D0C5000C9FFC /* Build configuration list for PBXNativeTarget "Calenbar" */;
 			buildPhases = (
 				144C01752462D0C3000C9FFC /* Sources */,
 				144C01762462D0C3000C9FFC /* Frameworks */,
@@ -126,9 +126,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				37826AE02DAEFAAD00A6BFF8 /* MeetingBar */,
+				37826AE02DAEFAAD00A6BFF8 /* Calenbar */,
 			);
-			name = MeetingBar;
+			name = Calenbar;
 			packageProductDependencies = (
 				1418907B26F23CCD00DCD9B1 /* KeyboardShortcuts */,
 				1418907E26F23CF600DCD9B1 /* Defaults */,
@@ -136,8 +136,8 @@
 				467D98082DDB501F00EB205C /* AppAuth */,
 				467D980A2DDB501F00EB205C /* AppAuthCore */,
 			);
-			productName = MeetingBar;
-			productReference = 144C01792462D0C3000C9FFC /* MeetingBar.app */;
+			productName = Calenbar;
+			productReference = 144C01792462D0C3000C9FFC /* Calenbar.app */;
 			productType = "com.apple.product-type.application";
 		};
 		14619A1A25EC26DF00F3098F /* MeetingBarTests */ = {
@@ -181,7 +181,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 144C01742462D0C3000C9FFC /* Build configuration list for PBXProject "MeetingBar" */;
+			buildConfigurationList = 144C01742462D0C3000C9FFC /* Build configuration list for PBXProject "Calenbar" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -222,7 +222,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				144C01782462D0C3000C9FFC /* MeetingBar */,
+				144C01782462D0C3000C9FFC /* Calenbar */,
 				14619A1A25EC26DF00F3098F /* MeetingBarTests */,
 			);
 		};
@@ -306,7 +306,7 @@
 /* Begin PBXTargetDependency section */
 		14619A2125EC26DF00F3098F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 144C01782462D0C3000C9FFC /* MeetingBar */;
+			target = 144C01782462D0C3000C9FFC /* Calenbar */;
 			targetProxy = 14619A2025EC26DF00F3098F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -372,7 +372,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -436,7 +436,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = NO;
@@ -450,7 +450,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = MeetingBar/MeetingBar.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Calenbar/MeetingBar.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -460,16 +460,16 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = MeetingBar/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MeetingBar;
+				INFOPLIST_FILE = Calenbar/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Calenbar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 5.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = leits.MeetingBar;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.armendu.Calenbar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 6.0;
@@ -480,7 +480,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = MeetingBar/MeetingBar.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Calenbar/MeetingBar.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -490,16 +490,16 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = MeetingBar/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MeetingBar;
+				INFOPLIST_FILE = Calenbar/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Calenbar;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 5.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = leits.MeetingBar;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.armendu.Calenbar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 6.0;
@@ -520,11 +520,11 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = leits.MeetingBarTests;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.armendu.CalenbarTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MeetingBar.app/Contents/MacOS/MeetingBar";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Calenbar.app/Contents/MacOS/Calenbar";
 			};
 			name = Debug;
 		};
@@ -542,18 +542,18 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				PRODUCT_BUNDLE_IDENTIFIER = leits.MeetingBarTests;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.armendu.CalenbarTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MeetingBar.app/Contents/MacOS/MeetingBar";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Calenbar.app/Contents/MacOS/Calenbar";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		144C01742462D0C3000C9FFC /* Build configuration list for PBXProject "MeetingBar" */ = {
+		144C01742462D0C3000C9FFC /* Build configuration list for PBXProject "Calenbar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				144C018A2462D0C5000C9FFC /* Debug */,
@@ -562,7 +562,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		144C018C2462D0C5000C9FFC /* Build configuration list for PBXNativeTarget "MeetingBar" */ = {
+		144C018C2462D0C5000C9FFC /* Build configuration list for PBXNativeTarget "Calenbar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				144C018D2462D0C5000C9FFC /* Debug */,

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "144C01782462D0C3000C9FFC"
-               BuildableName = "MeetingBar.app"
-               BlueprintName = "MeetingBar"
-               ReferencedContainer = "container:MeetingBar.xcodeproj">
+               BuildableName = "Calenbar.app"
+               BlueprintName = "Calenbar"
+               ReferencedContainer = "container:Calenbar.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,9 +32,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "144C01782462D0C3000C9FFC"
-            BuildableName = "MeetingBar.app"
-            BlueprintName = "MeetingBar"
-            ReferencedContainer = "container:MeetingBar.xcodeproj">
+            BuildableName = "Calenbar.app"
+            BlueprintName = "Calenbar"
+            ReferencedContainer = "container:Calenbar.xcodeproj">
          </BuildableReference>
       </CodeCoverageTargets>
       <Testables>
@@ -45,7 +45,7 @@
                BlueprintIdentifier = "14619A1A25EC26DF00F3098F"
                BuildableName = "MeetingBarTests.xctest"
                BlueprintName = "MeetingBarTests"
-               ReferencedContainer = "container:MeetingBar.xcodeproj">
+               ReferencedContainer = "container:Calenbar.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -67,9 +67,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "144C01782462D0C3000C9FFC"
-            BuildableName = "MeetingBar.app"
-            BlueprintName = "MeetingBar"
-            ReferencedContainer = "container:MeetingBar.xcodeproj">
+            BuildableName = "Calenbar.app"
+            BlueprintName = "Calenbar"
+            ReferencedContainer = "container:Calenbar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -84,9 +84,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "144C01782462D0C3000C9FFC"
-            BuildableName = "MeetingBar.app"
-            BlueprintName = "MeetingBar"
-            ReferencedContainer = "container:MeetingBar.xcodeproj">
+            BuildableName = "Calenbar.app"
+            BlueprintName = "Calenbar"
+            ReferencedContainer = "container:Calenbar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
