@@ -28,10 +28,20 @@ struct MeetingSummaryView: View {
                     .foregroundStyle(.secondary)
 
                 HStack(spacing: 7) {
-                    Image(nsImage: providerIcon)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 16, height: 16)
+                    // Only reserve space for the provider icon when the
+                    // event actually has a detected meeting service. For a
+                    // plain calendar event (no video link) the icon is the
+                    // generic "no_online_session" glyph, which renders
+                    // invisibly in dark mode but still took up 16pt + 7pt —
+                    // that pushed the title ~23pt to the right of the
+                    // section title above it and the metadata below it,
+                    // reading as a broken stair-step indent.
+                    if presentation.meetingService != nil {
+                        Image(nsImage: providerIcon)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                    }
 
                     Text(presentation.eventTitle)
                         .font(.system(size: 14, weight: .semibold))
