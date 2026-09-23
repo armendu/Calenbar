@@ -27,7 +27,6 @@ struct MenuBuilder {
     /// state-driven branches; production callers must pass a real snapshot.
     var state: StatusBarMenuState = StatusBarMenuState()
     var isFantasticalInstalled = checkIsFantasticalInstalled()
-    var installationDate: Date?
     var now: Date = Date()
 
     // MARK: Top section ------------------------------------------------------
@@ -428,26 +427,6 @@ struct MenuBuilder {
 
     func buildPreferencesSection() -> [NSMenuItem] {
         var items: [NSMenuItem] = []
-
-        var showRateAppButton = true
-        if let installationDate {
-            let twoWeeksAfterInstallation = Calendar.current.date(
-                byAdding: .day,
-                value: 14,
-                to: installationDate
-            )!
-            showRateAppButton = now > twoWeeksAfterInstallation
-        }
-
-        if showRateAppButton {
-            let rateItem = NSMenuItem(
-                title: "status_bar_rate_app".loco(),
-                action: #selector(StatusBarItemController.rateApp),
-                keyEquivalent: ""
-            )
-            rateItem.target = target
-            items.append(rateItem)
-        }
 
         let preferencesItem = NSMenuItem(
             title: "\("status_bar_preferences".loco())…",

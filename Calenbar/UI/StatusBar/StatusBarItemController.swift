@@ -74,8 +74,6 @@ final class StatusBarItemController {
         set { _eventsOverride = newValue }
     }
 
-    let installationDate = getInstallationDate()
-
     private var dependencies = StatusBarDependencies()
 
     private var cancellables = Set<AnyCancellable>()
@@ -344,8 +342,7 @@ final class StatusBarItemController {
         var appState = dependencies.appState()
         appState.events = events
         let menuState = StatusBarMenuState.make(from: appState)
-        let builder = MenuBuilder(
-            target: self, state: menuState, installationDate: installationDate)
+        let builder = MenuBuilder(target: self, state: menuState)
 
         statusItemMenu.autoenablesItems = false
         statusItemMenu.removeAllItems()
@@ -449,11 +446,6 @@ final class StatusBarItemController {
     @objc
     func toggleMeetingTitleVisibility() {
         dependencies.send(.toggleMeetingTitleVisibility)
-    }
-
-    @objc
-    func rateApp() {
-        Links.rateAppInAppStore.openInDefaultBrowser()
     }
 
     @objc
@@ -618,13 +610,23 @@ enum StatusBarTitleRenderer {
         return title
     }
 
+    /// NSStatusBarButton's `imagePosition = .imageLeft` butts the title
+    /// directly against the icon with no configurable gap, reading as
+    /// cramped. A small head indent on the title's paragraph style nudges
+    /// the text away from the icon without affecting the icon itself.
+    private static let iconTitleGap: CGFloat = 4
+
     private static func titleAttributes(
         style: StatusBarTitleStyle,
         font: NSFont,
         baselineOffset: CGFloat? = nil
     ) -> [NSAttributedString.Key: Any] {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.firstLineHeadIndent = iconTitleGap
+        paragraphStyle.headIndent = iconTitleGap
         var attributes: [NSAttributedString.Key: Any] = [
-            .font: font
+            .font: font,
+            .paragraphStyle: paragraphStyle
         ]
         if let baselineOffset {
             attributes[.baselineOffset] = baselineOffset

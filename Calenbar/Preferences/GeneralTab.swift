@@ -153,6 +153,10 @@ struct PatronageAppSection: View {
                     WindowCoordinator().openChangelogWindow()
                 }
                 .buttonStyle(.link)
+                Button("status_bar_rate_app".loco()) {
+                    Links.rateAppInAppStore.openInDefaultBrowser()
+                }
+                .buttonStyle(.link)
                 Spacer()
                 Button("preferences_status_copy_diagnostics".loco()) {
                     DiagnosticsClipboard.copy(
