@@ -429,20 +429,6 @@ struct MenuBuilder {
     func buildPreferencesSection() -> [NSMenuItem] {
         var items: [NSMenuItem] = []
 
-        let showChangelogItem = compareVersions(
-            state.appMajorVersion, state.lastRevisedMajorVersion)
-
-        if showChangelogItem {
-            let changelogItem = NSMenuItem(
-                title: "status_bar_whats_new".loco(),
-                action: #selector(StatusBarItemController.openChangelogAction),
-                keyEquivalent: ""
-            )
-            changelogItem.image = NSImage(named: NSImage.statusAvailableName)
-            changelogItem.target = target
-            items.append(changelogItem)
-        }
-
         var showRateAppButton = true
         if let installationDate {
             let twoWeeksAfterInstallation = Calendar.current.date(

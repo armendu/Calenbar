@@ -621,9 +621,6 @@ final class MenuBuilderTests: BaseTestCase {
 
     func test_preferencesSectionContainsExpectedItems() {
         // --- Arrange -----------------------------------------------------------------
-        // Force "What's New" to appear
-        Defaults[.appVersion] = "5.0.0"
-        Defaults[.lastRevisedVersionInChangelog] = "4.2.0"
         Defaults[.isInstalledFromAppStore] = true
 
         // Force "Rate App" to appear (installation > 14 days ago)
@@ -639,10 +636,6 @@ final class MenuBuilderTests: BaseTestCase {
         let titles = MenuBuilder.plainTitles(of: items)
 
         // --- Assert ------------------------------------------------------------------
-        XCTAssertTrue(
-            titles.contains(where: { $0.contains("status_bar_whats_new".loco()) }),
-            "Should show “What's New” when appVersion > changelogVersion")
-
         XCTAssertTrue(
             titles.contains(where: { $0.contains("status_bar_rate_app".loco()) }),
             "Should show “Rate App” button after two weeks")
@@ -1623,21 +1616,17 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         let controller = StatusBarItemController()
         defer { NSStatusBar.system.removeStatusItem(controller.statusItem) }
         var didOpenPreferences = false
-        var didOpenChangelog = false
         var didQuit = false
 
         controller.configure(dependencies: StatusBarDependencies(
             openPreferences: { didOpenPreferences = true },
-            openChangelog: { didOpenChangelog = true },
             quit: { didQuit = true }
         ))
 
         controller.openPreferencesAction()
-        controller.openChangelogAction()
         controller.quitAction()
 
         XCTAssertTrue(didOpenPreferences)
-        XCTAssertTrue(didOpenChangelog)
         XCTAssertTrue(didQuit)
     }
 

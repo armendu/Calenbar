@@ -45,7 +45,6 @@ private final class EndToEndHarness {
     private(set) var snoozedEvents: [(eventID: String, action: NotificationEventTimeAction)] = []
     private(set) var providerChanges: [(provider: EventStoreProvider, signOut: Bool)] = []
     private(set) var openPreferencesCallCount = 0
-    private(set) var openChangelogCallCount = 0
 
     /// Strong reference to the installed in-app action sink. The scheduler's
     /// runner keeps only a weak reference, so the harness owns it for the test.
@@ -113,8 +112,7 @@ private final class EndToEndHarness {
             appState: { [weak self] in self?.model.state ?? AppState() },
             events: { [weak self] in self?.model.state.events ?? [] },
             send: { [weak self] action in self?.model.send(action) },
-            openPreferences: { [weak self] in self?.openPreferencesCallCount += 1 },
-            openChangelog: { [weak self] in self?.openChangelogCallCount += 1 }
+            openPreferences: { [weak self] in self?.openPreferencesCallCount += 1 }
         ))
     }
 
@@ -542,28 +540,6 @@ final class StatusBarEndToEndFlowTests: EndToEndFlowTestCase {
         harness.controller.joinNextMeeting()
 
         XCTAssertEqual(harness.openedMeetingIDs, ["E1"])
-    }
-
-    // MARK: Changelog
-
-    func testWhatsNewItemSurfacesAndRoutesToChangelog() async throws {
-        configureDisplayDefaults()
-        Defaults[.appVersion] = "5.0.0"
-        Defaults[.lastRevisedVersionInChangelog] = "4.2.0"
-        let harness = makeHarness(events: [makeEvent(id: "E1", startingIn: 300)])
-        defer { harness.stop() }
-
-        await waitForState(of: harness, description: "event reaches AppModel") {
-            $0.events.count == 1
-        }
-
-        let whatsNew = try XCTUnwrap(flatten(rebuildMenu(harness)).first {
-            $0.action == #selector(StatusBarItemController.openChangelogAction)
-        })
-        XCTAssertEqual(whatsNew.title, "status_bar_whats_new".loco())
-
-        performClick(whatsNew)
-        XCTAssertEqual(harness.openChangelogCallCount, 1)
     }
 
     // MARK: Lifecycle refresh triggers

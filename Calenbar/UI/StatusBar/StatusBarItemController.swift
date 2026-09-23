@@ -55,7 +55,6 @@ struct StatusBarDependencies {
     var events: @MainActor () -> [MBEvent] = { [] }
     var send: @MainActor (AppAction) -> Void = { _ in }
     var openPreferences: @MainActor () -> Void = {}
-    var openChangelog: @MainActor () -> Void = {}
     var quit: @MainActor () -> Void = {}
 }
 
@@ -560,11 +559,6 @@ final class StatusBarItemController {
 
     private var stateProvider: EventStoreProvider {
         dependencies.appState().activeProvider
-    }
-
-    @objc
-    func openChangelogAction() {
-        dependencies.openChangelog()
     }
 
     @objc

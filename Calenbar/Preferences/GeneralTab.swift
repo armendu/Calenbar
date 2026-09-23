@@ -149,6 +149,10 @@ struct PatronageAppSection: View {
                     Links.emailMe.openInDefaultBrowser()
                 }
                 .buttonStyle(.link)
+                Button("status_bar_whats_new".loco()) {
+                    WindowCoordinator().openChangelogWindow()
+                }
+                .buttonStyle(.link)
                 Spacer()
                 Button("preferences_status_copy_diagnostics".loco()) {
                     DiagnosticsClipboard.copy(
