@@ -128,6 +128,10 @@ struct CalenbarAgendaRow: Equatable, Identifiable {
     let timeRangeText: String
     let meetingService: MeetingServices?
     let isCurrent: Bool
+    /// True once the event's end time has passed. Rendered de-emphasized
+    /// (CalenbarAgendaRowView) so a finished event lower in the agenda list
+    /// doesn't read as visually equal to the still-upcoming ones above it.
+    let hasEnded: Bool
 }
 
 /// AppKit-free snapshot of everything the glass panel's primary section
@@ -218,7 +222,8 @@ struct CalenbarPanelViewModel: Equatable {
             title: event.title.isEmpty ? labels.noTitle : event.title,
             timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
             meetingService: event.meetingService,
-            isCurrent: event.startDate <= now && event.endDate > now
+            isCurrent: event.startDate <= now && event.endDate > now,
+            hasEnded: event.endDate <= now
         )
     }
 }

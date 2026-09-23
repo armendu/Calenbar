@@ -100,6 +100,33 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.emptyStateMessage)
     }
 
+    /// A finished event still appears in today's agenda (it's part of the
+    /// day's history), but it must be flagged so the row can be rendered
+    /// de-emphasized — otherwise it reads as equally "upcoming" as the
+    /// still-future rows around it.
+    func testPastEventInAgendaIsFlaggedAsHasEnded() {
+        let next = makeEvent(
+            id: "upcoming",
+            title: "Upcoming",
+            startDate: now.addingTimeInterval(3600),
+            endDate: now.addingTimeInterval(5400)
+        )
+        let past = makeEvent(
+            id: "finished",
+            title: "Finished",
+            startDate: now.addingTimeInterval(-7200),
+            endDate: now.addingTimeInterval(-3600)
+        )
+        let state = makeState(nextEvent: next, todayEvents: [next, past])
+
+        let viewModel = build(state)
+
+        let pastRow = viewModel.agenda.first { $0.id == past.id }
+        XCTAssertEqual(pastRow?.hasEnded, true)
+        let upcomingRow = viewModel.agenda.first { $0.id == next.id }
+        XCTAssertNil(upcomingRow, "next event is excluded from the agenda — it's already the summary card")
+    }
+
     /// The event already shown as the prominent summary card shouldn't also
     /// repeat as the first row of the agenda list below it — that's the
     /// same meeting rendered twice on screen for no reason.

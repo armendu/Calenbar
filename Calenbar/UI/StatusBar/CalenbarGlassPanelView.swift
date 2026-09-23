@@ -192,8 +192,8 @@ private struct CalenbarRowButtonStyle: ButtonStyle {
                 countdown: "in 4m"
             ),
             agenda: [
-                CalenbarAgendaRow(id: "1", title: "Weekly product sync", timeRangeText: "10:00 – 10:30", meetingService: .zoom, isCurrent: false),
-                CalenbarAgendaRow(id: "2", title: "1:1 with manager", timeRangeText: "11:00 – 11:30", meetingService: .meet, isCurrent: false)
+                CalenbarAgendaRow(id: "1", title: "Weekly product sync", timeRangeText: "10:00 – 10:30", meetingService: .zoom, isCurrent: false, hasEnded: true),
+                CalenbarAgendaRow(id: "2", title: "1:1 with manager", timeRangeText: "11:00 – 11:30", meetingService: .meet, isCurrent: false, hasEnded: false)
             ],
             emptyStateMessage: nil
         ),

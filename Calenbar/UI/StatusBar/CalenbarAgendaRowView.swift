@@ -56,6 +56,10 @@ struct CalenbarAgendaRowView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
+        // A finished event rendered at full strength reads as equally
+        // "next" as the still-upcoming rows around it — dim the whole row
+        // so a glance down the agenda reads past-vs-upcoming correctly.
+        .opacity(row.hasEnded ? 0.45 : 1)
         // Horizontal inset matches MeetingSummaryView's effective left edge
         // in the summary tile above (its own 12pt padding + the 4pt this
         // panel adds around it, see CalenbarGlassPanelView.summaryTile) —
@@ -100,7 +104,8 @@ struct CalenbarAgendaRowView: View {
                 title: "Stand Up",
                 timeRangeText: "10:00 – 10:15",
                 meetingService: .zoom,
-                isCurrent: true
+                isCurrent: true,
+                hasEnded: false
             )
         )
         CalenbarAgendaRowView(
@@ -109,7 +114,18 @@ struct CalenbarAgendaRowView: View {
                 title: "1:1 with manager",
                 timeRangeText: "11:00 – 11:30",
                 meetingService: .meet,
-                isCurrent: false
+                isCurrent: false,
+                hasEnded: false
+            )
+        )
+        CalenbarAgendaRowView(
+            row: CalenbarAgendaRow(
+                id: "3",
+                title: "Morning sync (finished)",
+                timeRangeText: "08:00 – 08:15",
+                meetingService: nil,
+                isCurrent: false,
+                hasEnded: true
             )
         )
     }
