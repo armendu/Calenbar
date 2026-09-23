@@ -122,6 +122,24 @@ struct PatronageAppSection: View {
 
             Divider()
 
+            // App actions relocated here from the status bar menu — What's
+            // New and Rate App used to live in the classic dropdown; they're
+            // now dedicated, clearly-visible buttons in Preferences.
+            HStack(spacing: 10) {
+                Button {
+                    WindowCoordinator().openChangelogWindow()
+                } label: {
+                    Label("status_bar_whats_new".loco(), systemImage: "sparkles")
+                }
+                Button {
+                    Links.rateAppInAppStore.openInDefaultBrowser()
+                } label: {
+                    Label("status_bar_rate_app".loco(), systemImage: "star")
+                }
+                Spacer()
+            }
+            .buttonStyle(.bordered)
+
             // Primary support actions, made prominent with icons.
             HStack(spacing: 10) {
                 Button {
@@ -147,14 +165,6 @@ struct PatronageAppSection: View {
                 .buttonStyle(.link)
                 Button("preferences_general_external_contact".loco()) {
                     Links.emailMe.openInDefaultBrowser()
-                }
-                .buttonStyle(.link)
-                Button("status_bar_whats_new".loco()) {
-                    WindowCoordinator().openChangelogWindow()
-                }
-                .buttonStyle(.link)
-                Button("status_bar_rate_app".loco()) {
-                    Links.rateAppInAppStore.openInDefaultBrowser()
                 }
                 .buttonStyle(.link)
                 Spacer()
