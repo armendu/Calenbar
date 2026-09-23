@@ -19,6 +19,14 @@ enum MenuStyleConstants {
     static let calendarIconName = "iconCalendar"
     static let iconSize: NSSize = .init(width: 16, height: 16)
 
+    /// Deliberately smaller than the dropdown menu's `defaultFontSize` /
+    /// `iconSize`: the menu-bar button itself should sit lighter next to
+    /// other menu-bar items (matching e.g. Notion Calendar), not the fuller
+    /// weight that reads well inside the dropdown. Only the status-bar
+    /// button uses these — the classic menu keeps the larger sizes.
+    static let statusBarFontSize: CGFloat = 12.5
+    static let statusBarIconSize: NSSize = .init(width: 15, height: 15)
+
     /// Loads a named asset; if the asset is missing or has been renamed,
     /// falls back to the bundle's runtime app icon and finally to a 1x1
     /// placeholder so the menu bar never crashes on a misconfigured Defaults
@@ -110,7 +118,7 @@ final class StatusBarItemController {
 
         // Temporary icon and menu before app delegate setup
         statusItem.button?.image = MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
-        statusItem.button?.image?.size = MenuStyleConstants.iconSize
+        statusItem.button?.image?.size = MenuStyleConstants.statusBarIconSize
         statusItem.button?.imagePosition = .imageLeft
         let menuItem = statusItemMenu.addItem(
             withTitle: "window_title_onboarding".loco(), action: nil, keyEquivalent: "")
@@ -310,12 +318,14 @@ final class StatusBarItemController {
         switch presentation.icon {
         case .asset(let name):
             button.image = MenuStyleConstants.iconNamed(name)
-            button.image?.size = MenuStyleConstants.iconSize
+            button.image?.size = MenuStyleConstants.statusBarIconSize
         case .meetingService(let service):
-            button.image = getIconForMeetingService(service)
+            let icon = getIconForMeetingService(service)
+            icon.size = MenuStyleConstants.statusBarIconSize
+            button.image = icon
         case .todaysDate:
             button.image = MenuStyleConstants.todaysCalendarIcon
-            button.image?.size = MenuStyleConstants.iconSize
+            button.image?.size = MenuStyleConstants.statusBarIconSize
         case .none:
             break
         }
@@ -352,7 +362,7 @@ final class StatusBarItemController {
         else { return }
 
         button.image = MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
-        button.image?.size = MenuStyleConstants.iconSize
+        button.image?.size = MenuStyleConstants.statusBarIconSize
         button.imagePosition = .imageLeft
     }
 
@@ -603,7 +613,7 @@ enum StatusBarTitleRenderer {
                 string: eventTitle,
                 attributes: titleAttributes(
                     style: presentation.titleStyle,
-                    font: NSFont.systemFont(ofSize: MenuStyleConstants.defaultFontSize)
+                    font: NSFont.systemFont(ofSize: MenuStyleConstants.statusBarFontSize)
                 )
             )
         case .stacked:
@@ -616,7 +626,7 @@ enum StatusBarTitleRenderer {
             string: presentation.title,
             attributes: titleAttributes(
                 style: presentation.titleStyle,
-                font: NSFont.systemFont(ofSize: 12),
+                font: NSFont.systemFont(ofSize: MenuStyleConstants.statusBarFontSize - 1),
                 baselineOffset: -3
             )
         )
@@ -624,7 +634,7 @@ enum StatusBarTitleRenderer {
             NSAttributedString(
                 string: "\n" + presentation.time,
                 attributes: [
-                    NSAttributedString.Key.font: NSFont.systemFont(ofSize: 9),
+                    NSAttributedString.Key.font: NSFont.systemFont(ofSize: 8),
                     NSAttributedString.Key.foregroundColor: NSColor.lightGray
                 ]
             ))
