@@ -58,15 +58,20 @@ struct MeetingSummaryView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        // A fixed width, not maxWidth: .infinity: this view is the root view
-        // of an NSMenuItem custom view (see MenuBuilder.makeMeetingSummaryItem),
+        // A capped maxWidth, not .infinity: this view is the root view of an
+        // NSMenuItem custom view (see MenuBuilder.makeMeetingSummaryItem),
         // and NSMenu consults NSHostingView.fittingSize to size the whole
         // menu. An unbounded .infinity here reports back a huge "ideal"
         // width (the same NSHostingView.fittingSize unreliability already
         // found for the glass panel in CalenbarPanelController), stretching
-        // the entire classic menu far past its intended 380pt.
+        // the entire classic menu far past its intended 380pt. Deliberately
+        // NOT a rigid minWidth+maxWidth pin, though: this view is reused
+        // inside the glass panel's summary tile (CalenbarGlassPanelView),
+        // which only has ~372pt available after its own padding — a rigid
+        // 380pt there overflows the tile's rounded shape on one side. A
+        // bare maxWidth caps the runaway-ideal-size case while still
+        // shrinking to fit whatever narrower width it's actually given.
         .frame(
-            minWidth: Self.preferredWidth,
             maxWidth: Self.preferredWidth,
             minHeight: Self.preferredHeight,
             alignment: .leading
