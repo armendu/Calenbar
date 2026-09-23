@@ -140,6 +140,39 @@ struct EventsSection: View {
 
 // MARK: - Status bar
 
+/// Discrete presets for "show only events starting within," mirroring
+/// Notion Calendar's own picker for the same idea, in place of a free-form
+/// minutes stepper. Backed by the same two existing Defaults keys
+/// (`showEventMaxTimeUntilEventEnabled`/`showEventMaxTimeUntilEventThreshold`)
+/// this setting has always used — no migration, no new storage, just a
+/// friendlier picker over the same values. `.always` maps to the setting
+/// being disabled entirely (event always shown regardless of distance).
+enum ShowMeetingThresholdOption: Int, CaseIterable {
+    case always = 0
+    case fiveMinutes = 5
+    case tenMinutes = 10
+    case fifteenMinutes = 15
+    case thirtyMinutes = 30
+    case oneHour = 60
+    case twoHours = 120
+    case fourHours = 240
+    case eightHours = 480
+
+    var label: String {
+        switch self {
+        case .always: return "calenbar_threshold_always".loco()
+        case .fiveMinutes: return "calenbar_threshold_5_minutes".loco()
+        case .tenMinutes: return "calenbar_threshold_10_minutes".loco()
+        case .fifteenMinutes: return "calenbar_threshold_15_minutes".loco()
+        case .thirtyMinutes: return "calenbar_threshold_30_minutes".loco()
+        case .oneHour: return "calenbar_threshold_1_hour".loco()
+        case .twoHours: return "calenbar_threshold_2_hours".loco()
+        case .fourHours: return "calenbar_threshold_4_hours".loco()
+        case .eightHours: return "calenbar_threshold_8_hours".loco()
+        }
+    }
+}
+
 struct StatusBarSection: View {
     @Default(.eventTitleIconFormat) var eventTitleIconFormat
     @Default(.eventTitleFormat) var eventTitleFormat
@@ -148,6 +181,26 @@ struct StatusBarSection: View {
     @Default(.showEventMaxTimeUntilEventThreshold) var showEventMaxTimeUntilEventThreshold
     @Default(.showEventMaxTimeUntilEventEnabled) var showEventMaxTimeUntilEventEnabled
     @Default(.ongoingEventVisibility) var ongoingEventVisibility
+
+    /// Bridges the two underlying booleans/int Defaults keys to the single
+    /// discrete picker above — `.always` disables the setting, any other
+    /// case enables it and stores that case's minute value.
+    private var showMeetingThresholdBinding: Binding<ShowMeetingThresholdOption> {
+        Binding(
+            get: {
+                guard showEventMaxTimeUntilEventEnabled else { return .always }
+                return ShowMeetingThresholdOption(rawValue: showEventMaxTimeUntilEventThreshold) ?? .oneHour
+            },
+            set: { newValue in
+                if newValue == .always {
+                    showEventMaxTimeUntilEventEnabled = false
+                } else {
+                    showEventMaxTimeUntilEventEnabled = true
+                    showEventMaxTimeUntilEventThreshold = newValue.rawValue
+                }
+            }
+        )
+    }
 
     var body: some View {
         Section(header: Text("preferences_appearance_status_bar_title".loco())) {
@@ -227,28 +280,14 @@ struct StatusBarSection: View {
         }
 
         Section {
-            Toggle(
+            Picker(
                 preferenceLabel("preferences_appearance_status_bar_next_event_toggle"),
-                isOn: $showEventMaxTimeUntilEventEnabled
-            )
-
-            HStack {
-                Spacer()
-                Stepper(
-                    value: $showEventMaxTimeUntilEventThreshold,
-                    in: 5 ... 720,
-                    step: 5
-                ) {
-                    Text(
-                        "preferences_appearance_status_bar_next_event_stepper".loco(
-                            showEventMaxTimeUntilEventThreshold)
-                    )
-                    .monospacedDigit()
+                selection: showMeetingThresholdBinding
+            ) {
+                ForEach(ShowMeetingThresholdOption.allCases, id: \.self) { option in
+                    Text(option.label).tag(option)
                 }
-                .fixedSize()
             }
-            .padding(.leading, 16)
-            .disabled(!showEventMaxTimeUntilEventEnabled)
 
             Picker(
                 preferenceLabel("preferences_appearance_status_bar_ongoing_title"),

@@ -139,6 +139,15 @@
 "preferences_appearance_status_bar_ongoing_time_ten_before_next_value" = "hide 10 min before next event";
 "preferences_appearance_status_bar_next_event_toggle" = "Show only events starting within";
 "preferences_appearance_status_bar_next_event_stepper" = "%d minutes";
+"calenbar_threshold_always" = "Always";
+"calenbar_threshold_5_minutes" = "5 minutes before";
+"calenbar_threshold_10_minutes" = "10 minutes before";
+"calenbar_threshold_15_minutes" = "15 minutes before";
+"calenbar_threshold_30_minutes" = "30 minutes before";
+"calenbar_threshold_1_hour" = "1 hour before";
+"calenbar_threshold_2_hours" = "2 hours before";
+"calenbar_threshold_4_hours" = "4 hours before";
+"calenbar_threshold_8_hours" = "8 hours before";
 "preferences_appearance_menu_title" = "Menu";
 "preferences_appearance_menu_show_timeline_toggle" = "Show visual timeline of the day";
 "preferences_appearance_menu_shorten_event_title_toggle" = "Shorten event title to";
