@@ -58,8 +58,16 @@ struct MeetingSummaryView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        // A fixed width, not maxWidth: .infinity: this view is the root view
+        // of an NSMenuItem custom view (see MenuBuilder.makeMeetingSummaryItem),
+        // and NSMenu consults NSHostingView.fittingSize to size the whole
+        // menu. An unbounded .infinity here reports back a huge "ideal"
+        // width (the same NSHostingView.fittingSize unreliability already
+        // found for the glass panel in CalenbarPanelController), stretching
+        // the entire classic menu far past its intended 380pt.
         .frame(
-            maxWidth: .infinity,
+            minWidth: Self.preferredWidth,
+            maxWidth: Self.preferredWidth,
             minHeight: Self.preferredHeight,
             alignment: .leading
         )
