@@ -143,7 +143,7 @@ extension StatusBarMenuState {
         }
 
         let thisWeekEvents = EventSelection.thisWeekEvents(
-            events,
+            events + appState.laterThisWeekEvents,
             startDate: \.startDate,
             now: now,
             calendar: .current,

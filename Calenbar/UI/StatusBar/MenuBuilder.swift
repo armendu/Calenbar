@@ -251,14 +251,7 @@ struct MenuBuilder {
         // avoids 5 `.loco()` lookups per ordinary timed event.
         let labels = CalenbarPanelLabels.current
 
-        // Header
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "E, d MMM"
-        dateFormatter.locale = I18N.instance.locale
-
-        let dateString = dateFormatter.string(from: date)
-        let dateTitle = "\(title) (\(dateString))"
-        items.append(NSMenuItem.sectionHeader(title: dateTitle))
+        items.append(NSMenuItem.sectionHeader(title: Self.sectionTitle(title, date: date)))
 
         // Events
         let sortedEvents = events.sorted {
@@ -291,20 +284,29 @@ struct MenuBuilder {
         return items
     }
 
+    /// "Today (Fri, 25 Sep)"
+    private static func sectionTitle(_ title: String, date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "E, d MMM"
+        dateFormatter.locale = I18N.instance.locale
+        return "\(title) (\(dateFormatter.string(from: date)))"
+    }
+
     // MARK: Named section -----------------------------------------------------
 
-    /// A section headed by a plain title (no date suffix) showing at most
-    /// `limit` visible events, soonest first. Adds nothing when none are visible.
+    /// A section showing at most `limit` visible events, soonest first, headed
+    /// by `title` and the first event's day, since its rows show only times.
+    /// Adds nothing when no event is visible.
     func buildNamedSection(title: String, events: [MBEvent], limit: Int) -> [NSMenuItem] {
         // Filter before limiting, so a hidden event can't use up the slot.
         let visible = events
             .filter { shouldRenderEvent($0) }
             .sorted { $0.startDate < $1.startDate }
             .prefix(limit)
-        guard !visible.isEmpty else { return [] }
+        guard let first = visible.first else { return [] }
 
         let labels = CalenbarPanelLabels.current
-        return [NSMenuItem.sectionHeader(title: title)]
+        return [NSMenuItem.sectionHeader(title: Self.sectionTitle(title, date: first.startDate))]
             + visible.compactMap { makeEventItem($0, labels: labels) }
     }
 

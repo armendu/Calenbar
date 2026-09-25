@@ -35,8 +35,15 @@ final class ThisWeekMenuSectionTests: BaseTestCase {
         XCTAssertTrue(section([]).isEmpty)
     }
 
-    func test_sectionIsHeadedByItsTitle() {
-        XCTAssertEqual(section([event("A")]).first?.title, "This week")
+    func test_headerNamesTheDayOfTheEvent() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E, d MMM"
+        formatter.locale = I18N.instance.locale
+
+        XCTAssertEqual(
+            section([event("A")]).first?.title,
+            "This week (\(formatter.string(from: later)))"
+        )
     }
 
     func test_showsOnlyTheNextEvent() {
@@ -60,13 +67,42 @@ final class ThisWeekMenuSectionTests: BaseTestCase {
         XCTAssertTrue(section([event("declined", declined: true)]).isEmpty)
     }
 
-    func test_menuStateSkipsTomorrowWhenTomorrowHasItsOwnSection() throws {
+    /// Wednesday noon, when Friday of the same week is still ahead. The menu
+    /// state uses the user's calendar, so the week start can't be pinned.
+    private func midweekWednesday() throws -> Date {
         let calendar = Calendar.current
         let wednesday = try XCTUnwrap(calendar.nextDate(
             after: Date(),
             matching: DateComponents(hour: 12, weekday: 4),
             matchingPolicy: .nextTime
         ))
+        let friday = wednesday.addingTimeInterval(2 * 86_400)
+        try XCTSkipUnless(
+            calendar.isDate(friday, equalTo: wednesday, toGranularity: .weekOfYear),
+            "This locale's week ends before Friday"
+        )
+        return wednesday
+    }
+
+    func test_menuStateIncludesEventsFetchedForLaterThisWeek() throws {
+        let wednesday = try midweekWednesday()
+        let friday = makeFakeEvent(
+            id: "fri",
+            start: wednesday.addingTimeInterval(2 * 86_400),
+            end: wednesday.addingTimeInterval(2 * 86_400 + 1800)
+        )
+        var appState = AppState()
+        appState.laterThisWeekEvents = [friday]
+        Defaults[.showEventsForPeriod] = .today_n_tomorrow
+
+        let state = StatusBarMenuState.make(from: appState, settings: .current, now: wednesday)
+
+        XCTAssertEqual(state.thisWeekEvents.map(\.id), ["fri"])
+        XCTAssertNil(state.nextEvent, "Later events never become the next meeting")
+    }
+
+    func test_menuStateSkipsTomorrowWhenTomorrowHasItsOwnSection() throws {
+        let wednesday = try midweekWednesday()
         let thursday = makeFakeEvent(
             id: "thu",
             start: wednesday.addingTimeInterval(86_400),

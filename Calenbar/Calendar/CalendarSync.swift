@@ -37,6 +37,10 @@ public enum ProviderSelectionResult: Equatable {
 public class CalendarSync: ObservableObject {
     @Published public private(set) var calendars: [MBCalendar] = []
     @Published public private(set) var events: [MBEvent] = []
+    /// Events after the display period until the week ends, for the menu's
+    /// "This week" section. Kept out of `events` so notifications and the
+    /// next meeting still only see the display period.
+    @Published public private(set) var laterThisWeekEvents: [MBEvent] = []
     @Published public private(set) var providerHealth = ProviderHealth()
 
     var repository: CalendarRepository
@@ -77,6 +81,7 @@ public class CalendarSync: ObservableObject {
             providerGeneration += 1
             calendars = newCalendars
             events = []
+            laterThisWeekEvents = []
             providerHealth = ProviderHealth()
             subscribeToRepositoryStoreChanges()
             refreshSubject.send()
@@ -155,11 +160,14 @@ public class CalendarSync: ObservableObject {
         refreshSubject.send()
     }
 
-    /// Fetches events for the selected calendars within the specified date range
-    private func fetchEvents(fromCalendars: [MBCalendar]) async throws -> [MBEvent] {
+    /// Fetches the selected calendars' events, split into the display period
+    /// and the rest of the week.
+    private func fetchEvents(fromCalendars: [MBCalendar]) async throws
+        -> (events: [MBEvent], laterThisWeek: [MBEvent]) {
         let rawEvents: [MBEvent]
+        let periodEnd: Date
         do {
-            rawEvents = try await repository.fetchCurrentPeriodEvents(fromAllCalendars: fromCalendars)
+            (rawEvents, periodEnd) = try await repository.fetchCurrentPeriodEvents(fromAllCalendars: fromCalendars)
         } catch {
             throw CalendarSyncError.eventFetchFailed(error)
         }
@@ -171,7 +179,8 @@ public class CalendarSync: ObservableObject {
         if !AppSettings.current.events.dismissedEvents.isEmpty {
             AppSettings.refreshDismissedEvents(using: Array(deduplicatedEvents))
         }
-        return Array(deduplicatedEvents).filtered().sorted { $0.startDate < $1.startDate }
+        let events = Array(deduplicatedEvents).filtered().sorted { $0.startDate < $1.startDate }
+        return (events.filter { $0.startDate < periodEnd }, events.filter { $0.startDate >= periodEnd })
     }
 
     private func setupPublishers() {
@@ -220,6 +229,7 @@ public class CalendarSync: ObservableObject {
                         RefreshResult(
                             calendars: [],
                             events: [],
+                            laterThisWeekEvents: [],
                             health: ProviderHealth(),
                             providerGeneration: -1
                         )
@@ -229,6 +239,7 @@ public class CalendarSync: ObservableObject {
                 // On failure we republish these so the UI keeps showing last known data.
                 let preservedCalendars = self.calendars
                 let preservedEvents = self.events
+                let preservedLaterThisWeekEvents = self.laterThisWeekEvents
                 let previousHealth = self.providerHealth
                 let providerGeneration = self.providerGeneration
                 return Deferred {
@@ -243,7 +254,8 @@ public class CalendarSync: ObservableObject {
                                 let health = ProviderHealth.success(attempted: attempted)
                                 promise(.success(RefreshResult(
                                     calendars: cals,
-                                    events: evts,
+                                    events: evts.events,
+                                    laterThisWeekEvents: evts.laterThisWeek,
                                     health: health,
                                     providerGeneration: providerGeneration
                                 )))
@@ -260,6 +272,7 @@ public class CalendarSync: ObservableObject {
                                 promise(.success(RefreshResult(
                                     calendars: preservedCalendars,
                                     events: preservedEvents,
+                                    laterThisWeekEvents: preservedLaterThisWeekEvents,
                                     health: health,
                                     providerGeneration: providerGeneration
                                 )))
@@ -277,6 +290,7 @@ public class CalendarSync: ObservableObject {
                 }
                 self.calendars = result.calendars
                 self.events = result.events
+                self.laterThisWeekEvents = result.laterThisWeekEvents
                 self.providerHealth = result.health
             }
             .store(in: &cancellables)
@@ -287,6 +301,7 @@ public class CalendarSync: ObservableObject {
     private struct RefreshResult {
         let calendars: [MBCalendar]
         let events: [MBEvent]
+        let laterThisWeekEvents: [MBEvent]
         let health: ProviderHealth
         let providerGeneration: Int
     }

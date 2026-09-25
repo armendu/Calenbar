@@ -792,3 +792,98 @@ final class ProviderHealthTests: BaseTestCase {
         XCTAssertTrue(manager.providerHealth.authRequired)
     }
 }
+
+@MainActor
+final class ThisWeekFetchTests: BaseTestCase {
+    private var cancellables = Set<AnyCancellable>()
+
+    private var utcMondayFirst: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.firstWeekday = 2
+        return calendar
+    }
+
+    /// 2026-09-<day> at the given hour, UTC. Mon 21 … Sun 27, Mon 28.
+    private func date(_ day: Int, _ hour: Int = 0) -> Date {
+        DateComponents(
+            calendar: utcMondayFirst, timeZone: TimeZone(identifier: "UTC"),
+            year: 2026, month: 9, day: day, hour: hour
+        ).date!
+    }
+
+    func test_fetchRangeReachesTheEndOfTheWeek() {
+        let today = calendarFetchRange(for: .today, now: date(23, 10), calendar: utcMondayFirst)
+        XCTAssertEqual(today.from, date(23))
+        XCTAssertEqual(today.periodEnd, date(24))
+        XCTAssertEqual(today.to, date(28))
+
+        let withTomorrow = calendarFetchRange(for: .today_n_tomorrow, now: date(23, 10), calendar: utcMondayFirst)
+        XCTAssertEqual(withTomorrow.periodEnd, date(25))
+        XCTAssertEqual(withTomorrow.to, date(28))
+    }
+
+    func test_fetchRangeStopsAtThePeriodOnTheLastDayOfTheWeek() {
+        let sunday = calendarFetchRange(for: .today, now: date(27, 10), calendar: utcMondayFirst)
+        XCTAssertEqual(sunday.to, sunday.periodEnd)
+
+        // Tomorrow's section already reaches past the week's end.
+        let sundayWithTomorrow = calendarFetchRange(for: .today_n_tomorrow, now: date(27, 10), calendar: utcMondayFirst)
+        XCTAssertEqual(sundayWithTomorrow.to, date(29))
+    }
+
+    func test_eventsAfterThePeriodArePublishedSeparately() {
+        Defaults[.showEventsForPeriod] = .today
+        let now = Date()
+        let periodEnd = calendarFetchRange(for: .today).periodEnd
+        let current = makeFakeEvent(id: "current", start: now.addingTimeInterval(-60), end: now.addingTimeInterval(3600))
+        let later = makeFakeEvent(
+            id: "later", start: periodEnd.addingTimeInterval(3600), end: periodEnd.addingTimeInterval(5400)
+        )
+        let store = FakeEventStore(events: [later, current])
+
+        let manager = CalendarSync(provider: store, refreshInterval: 0)
+
+        let published = expectation(description: "events split at the period end")
+        manager.$laterThisWeekEvents
+            .drop(while: \.isEmpty)
+            .first()
+            .sink { _ in published.fulfill() }
+            .store(in: &cancellables)
+        wait(for: [published], timeout: 1.0)
+
+        XCTAssertEqual(manager.events.map(\.id), ["current"])
+        XCTAssertEqual(manager.laterThisWeekEvents.map(\.id), ["later"])
+        XCTAssertEqual(store.fetchedDateRanges.last?.to, calendarFetchRange(for: .today).to)
+    }
+
+    func test_providerSwitchClearsLaterThisWeekEvents() async {
+        let later = makeFakeEvent(
+            id: "later",
+            start: calendarFetchRange(for: .today).periodEnd.addingTimeInterval(3600),
+            end: calendarFetchRange(for: .today).periodEnd.addingTimeInterval(5400)
+        )
+        Defaults[.showEventsForPeriod] = .today
+        let storeA = FakeEventStore(events: [later])
+        let calendar = MBCalendar(title: "B", id: "b1", source: nil, email: nil, color: .black)
+        let storeB = FakeEventStore(calendars: [calendar], events: [])
+        let repository = CalendarRepository(
+            providerName: .macOSEventKit,
+            storeFactory: { $0 == .macOSEventKit ? storeA : storeB }
+        )
+        let manager = CalendarSync(repository: repository, refreshInterval: 0)
+
+        let loaded = expectation(description: "later events loaded")
+        manager.$laterThisWeekEvents
+            .drop(while: \.isEmpty)
+            .first()
+            .sink { _ in loaded.fulfill() }
+            .store(in: &cancellables)
+        await fulfillment(of: [loaded], timeout: 1.0)
+
+        let result = await manager.changeEventStoreProvider(.googleCalendar)
+
+        XCTAssertEqual(result, .success)
+        XCTAssertTrue(manager.laterThisWeekEvents.isEmpty)
+    }
+}

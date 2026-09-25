@@ -81,6 +81,7 @@ final class AppModelTests: BaseTestCase {
         )
         harness.model.send(.calendarsLoaded([calendar], provider: .macOSEventKit))
         harness.model.send(.eventsLoaded([event]))
+        harness.model.send(.laterThisWeekEventsLoaded([event]))
 
         harness.model.send(.changeProvider(.googleCalendar, signOut: true))
         XCTAssertTrue(harness.model.state.providerChangeInProgress)
@@ -90,8 +91,30 @@ final class AppModelTests: BaseTestCase {
         XCTAssertFalse(harness.model.state.providerChangeInProgress)
         XCTAssertTrue(harness.model.state.calendars.isEmpty)
         XCTAssertTrue(harness.model.state.events.isEmpty)
+        XCTAssertTrue(harness.model.state.laterThisWeekEvents.isEmpty)
         XCTAssertEqual(harness.providerChanges.map(\.provider), [.googleCalendar])
         XCTAssertEqual(harness.providerChanges.map(\.signOut), [true])
+    }
+
+    func testLaterThisWeekEventsReachStateWithoutSchedulingNotifications() async {
+        let harness = AppModelTestHarness()
+        let later = makeFakeEvent(
+            id: "later-this-week",
+            start: harness.fixedNow.addingTimeInterval(3 * 86_400),
+            end: harness.fixedNow.addingTimeInterval(3 * 86_400 + 1800)
+        )
+
+        _ = harness.model // subscribes to the publishers
+        harness.laterThisWeekEventsSubject.send([later])
+        let delivered = expectation(description: "delivered on the main queue")
+        DispatchQueue.main.async { delivered.fulfill() }
+        await fulfillment(of: [delivered], timeout: 1)
+        await harness.flushAsyncActions()
+
+        XCTAssertEqual(harness.model.state.laterThisWeekEvents.map(\.id), ["later-this-week"])
+        XCTAssertTrue(harness.model.state.events.isEmpty)
+        XCTAssertNil(harness.model.state.nextEvent(now: harness.fixedNow))
+        XCTAssertEqual(harness.reconciledEventIDs, [])
     }
 
     func testSuccessfulProviderChangeUsesAlreadyFetchedCalendars() async {

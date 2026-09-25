@@ -108,4 +108,27 @@ final class ThisWeekEventsTests: XCTestCase {
         XCTAssertEqual(thisWeek([sunday], now: date(23, 10), firstWeekday: mondayFirst), ["sun"])
         XCTAssertEqual(thisWeek([sunday], now: date(23, 10), firstWeekday: sundayFirst), [])
     }
+
+    // MARK: - Range
+
+    private func range(now: Date, skippingTomorrow: Bool = false) -> Range<Date>? {
+        EventSelection.thisWeekRange(
+            now: now,
+            calendar: calendar(firstWeekday: mondayFirst),
+            skippingTomorrow: skippingTomorrow
+        )
+    }
+
+    func testRangeRunsFromTomorrowToTheEndOfTheWeek() {
+        XCTAssertEqual(range(now: date(23, 10)), date(24)..<date(28))
+    }
+
+    func testRangeStartsAfterTomorrowWhenTomorrowHasItsOwnSection() {
+        XCTAssertEqual(range(now: date(23, 10), skippingTomorrow: true), date(25)..<date(28))
+    }
+
+    func testRangeIsNilWhenNothingOfTheWeekIsLeft() {
+        XCTAssertNil(range(now: date(27, 10)))
+        XCTAssertNil(range(now: date(26, 10), skippingTomorrow: true))
+    }
 }

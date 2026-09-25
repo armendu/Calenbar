@@ -62,6 +62,7 @@ private final class EndToEndHarness {
 
         let environment = AppEnvironment(
             eventsPublisher: sync.$events.eraseToAnyPublisher(),
+            laterThisWeekEventsPublisher: sync.$laterThisWeekEvents.eraseToAnyPublisher(),
             calendarsPublisher: sync.$calendars
                 .map { ($0, sync.repository.activeProviderName) }
                 .eraseToAnyPublisher(),
@@ -812,18 +813,18 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
         let harness = makeHarness(events: [
             makeEvent(id: "TODAY", startingIn: 300, now: now),
             makeEvent(id: "TMRW", startingIn: tomorrowOffset, now: now)
-        ])
+        ], configureStore: { $0.respectsDateRange = true })
         defer { harness.stop() }
 
-        await waitForState(of: harness, description: "events reach AppModel") {
-            $0.events.count == 2
-        }
-
-        // With "today only" there's no Tomorrow section, but tomorrow's event
-        // still shows as the next one under "This week" when tomorrow falls in
-        // the current week.
+        // With "today only" there's no Tomorrow section. Tomorrow's event is
+        // still fetched and shown under "This week" when tomorrow falls in
+        // the current week, but it isn't one of the period's events.
         let tomorrow = now.addingTimeInterval(tomorrowOffset)
         let tomorrowIsThisWeek = Calendar.current.isDate(tomorrow, equalTo: now, toGranularity: .weekOfYear)
+        await waitForState(of: harness, description: "today's events reach AppModel") {
+            $0.events.map(\.id) == ["TODAY"]
+                && $0.laterThisWeekEvents.map(\.id) == (tomorrowIsThisWeek ? ["TMRW"] : [])
+        }
         let todayOnly = menuTitles(harness)
         XCTAssertTrue(todayOnly.contains { $0.contains("Event TODAY") })
         XCTAssertEqual(todayOnly.contains { $0.contains("Event TMRW") }, tomorrowIsThisWeek)
@@ -831,7 +832,11 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
 
+        try? await settleRefreshWindow(harness)
         Defaults[.showEventsForPeriod] = .today_n_tomorrow
+        await waitForState(of: harness, description: "tomorrow joins the period") {
+            $0.events.map(\.id) == ["TODAY", "TMRW"] && $0.laterThisWeekEvents.isEmpty
+        }
 
         // Tomorrow gets its own section, and "This week" doesn't repeat it.
         let bothDays = menuTitles(harness)
@@ -840,6 +845,35 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
         XCTAssertTrue(bothDays.contains {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
+    }
+
+    /// The provider only returns events inside the requested range, so this
+    /// fails unless the fetch reaches past today to the end of the week.
+    func testThisWeekSectionShowsAnEventLaterThisWeek() async throws {
+        configureDisplayDefaults()
+        Defaults[.showEventsForPeriod] = .today_n_tomorrow
+        let now = Date()
+        let calendar = Calendar.current
+        guard let range = EventSelection.thisWeekRange(now: now, calendar: calendar, skippingTomorrow: true)
+        else { throw XCTSkip("No day of this week is left after tomorrow") }
+        let start = range.lowerBound.addingTimeInterval(10 * 3600)
+
+        let harness = makeHarness(events: [
+            makeEvent(id: "TODAY", startingIn: 300, now: now),
+            makeEvent(id: "LATER", startingIn: start.timeIntervalSince(now), now: now)
+        ], configureStore: { $0.respectsDateRange = true })
+        defer { harness.stop() }
+
+        await waitForState(of: harness, description: "the later event reaches AppModel") {
+            $0.laterThisWeekEvents.map(\.id) == ["LATER"]
+        }
+
+        let titles = menuTitles(harness)
+        XCTAssertTrue(titles.contains { $0.hasPrefix("status_bar_section_this_week".loco()) })
+        XCTAssertTrue(titles.contains { $0.contains("Event LATER") })
+        // Only the display period drives notifications and the next meeting.
+        XCTAssertEqual(harness.model.state.events.map(\.id), ["TODAY"])
+        XCTAssertFalse(scheduledEventIDs(harness).contains("LATER"))
     }
 
     func testDeclinedEventsHiddenBySettingEndToEnd() async throws {
