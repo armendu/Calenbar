@@ -70,6 +70,21 @@ final class StatusBarIconTests: BaseTestCase {
         XCTAssertTrue(icon.isTemplate, "template images tint with the menu bar's appearance")
     }
 
+    /// VoiceOver reads the date when the status item shows only this icon.
+    func test_todaysDateIconDescribesTodaysDate() {
+        let icon = MenuStyleConstants.todaysDateIcon(pointSize: 20)
+        let formatter = DateFormatter()
+        formatter.locale = I18N.instance.locale
+        formatter.dateStyle = .full
+
+        XCTAssertEqual(icon.accessibilityDescription, formatter.string(from: Date()))
+        XCTAssertEqual(
+            MenuStyleConstants.iconWithTrailingGap(icon, gap: 4).accessibilityDescription,
+            icon.accessibilityDescription,
+            "padding the icon keeps its description"
+        )
+    }
+
     func test_noUpcomingModeShowsTodaysDateIcon() {
         let image = renderedImage(presentation(icon: .todaysDate))
 

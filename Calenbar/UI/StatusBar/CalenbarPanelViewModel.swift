@@ -191,7 +191,8 @@ struct CalenbarPanelViewModel: Equatable {
             title: event.title.isEmpty ? labels.noTitle : event.title,
             timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
             meetingService: event.meetingService,
-            isCurrent: event.isRunning(at: now),
+            // An all-day event spans the day; it isn't a meeting happening now.
+            isCurrent: event.isRunning(at: now) && !event.isAllDay,
             hasEnded: event.endDate <= now
         )
     }

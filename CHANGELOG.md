@@ -29,6 +29,9 @@ people updating from MeetingBar:
   now "Star on GitHub" there.
 * Removed MeetingBar's Patreon, Buy Me a Coffee and contact links from
   Preferences. "Report an Issue" opens Calenbar's GitHub issues.
+* Removed MeetingBar's in-app patronage purchases.
+* All-day events are no longer shown as a meeting happening now.
+* VoiceOver reads today's date for the menu bar's calendar icon.
 
 ### Security
 

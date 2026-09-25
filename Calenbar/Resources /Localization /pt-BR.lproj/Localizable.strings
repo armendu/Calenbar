@@ -47,13 +47,6 @@
 "preferences_general_shortcut_toggle_meeting_name_visibility" = "Alternar visibilidade do título na barra de status:";
 "preferences_general_meeting_bar_description" = "MeetingBar é um aplicativo Open Source\ncriado por Andrii Leitsius 🇺🇦\nPara reuniões mais fluidas e fáceis";
 "preferences_general_external_contact" = "Contato";
-"preferences_general_patron_title" = "Torne-se um apoiador";
-"preferences_general_patron_three_months" = "3 meses – 2.99 USD";
-"preferences_general_patron_six_months" = "6 meses – 5.99 USD";
-"preferences_general_patron_twelve_months" = "12 meses – 11.99 USD";
-"preferences_general_patron_description" = "Essas são compras únicas e não serão renovadas automaticamente.";
-"preferences_general_patron_thank_for_purchase" = "Obrigado! Você apoiou o MeetingBar por %d meses 🎉";
-"preferences_general_patron_restore_purchases" = "Restaurar Compras";
 
 // MARK: - Preferences Appearance
 
@@ -256,14 +249,6 @@
 
 // MARK: - Store
 
-"store_patronage_title" = "Apoio ao MeetingBar";
-"store_patronage_restore_success_message" = "Restaurado";
-"store_patronage_restore_nothing_message" = "Nada a restaurar";
-"store_patronage_purchase_success_message" = "Compra efetuada. Obrigado pelo seu apoio!";
-"store_patronage_purchase_unknown_message" = "Erro desconhecido. Entre em contato com o suporte.";
-"store_patronage_purchase_payment_not_allowed_message" = "O dispositivo não está autorizado a efetuar o pagamento";
-"store_patronage_purchase_store_product_not_available_message" = "O produto não está disponível na loja atual";
-"store_patronage_purchase_cloud_service_network_connection_failed" = "Não foi possível conectar à rede";
 
 // MARK: - Notifications
 

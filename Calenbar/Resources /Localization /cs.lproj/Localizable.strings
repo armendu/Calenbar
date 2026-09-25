@@ -23,17 +23,9 @@
 "notifications_snooze_until_start" = "Snooze until start time";
 "notifications_snooze_for" = "Snooze for %@ min";
 "notifications_meetingbar_join_event_action" = "Připojit se";
-"store_patronage_purchase_cloud_service_network_connection_failed" = "Nepodařilo se připojit k síti";
-"store_patronage_purchase_store_product_not_available_message" = "Produkt není v aktuálním obchodě k dispozici";
-"store_patronage_purchase_payment_not_allowed_message" = "Ze zařízení nelze provést platbu";
-"store_patronage_purchase_unknown_message" = "Neznámá chyba. Kontaktujte prosím podporu.";
-"store_patronage_purchase_success_message" = "Zakoupeno. Děkujeme za podporu!";
-"store_patronage_restore_nothing_message" = "Není co obnovovat";
-"store_patronage_restore_success_message" = "Obnoveno";
 
 // MARK: - Store
 
-"store_patronage_title" = "Členství MeetingBaru";
 "constants_meeting_service_url" = "URL";
 "constants_meeting_service_other" = "Jiná";
 "constants_meeting_service_zoom_native" = "Nativní Zoom";
@@ -227,13 +219,6 @@
 // MARK: - Preferences Appearance
 
 "preferences_appearance_events_title" = "Události";
-"preferences_general_patron_restore_purchases" = "Obnovit nákupy";
-"preferences_general_patron_thank_for_purchase" = "Díky! Podpořili jste MeetingBar na %d měsíců! 🎉";
-"preferences_general_patron_description" = "Toto jsou jednorázové nákupy a automaticky se neobnovují.";
-"preferences_general_patron_twelve_months" = "12 měsíců – 11,99 USD";
-"preferences_general_patron_six_months" = "6 měsíců – 5,99 USD";
-"preferences_general_patron_three_months" = "3 měsíce – 2,99 USD";
-"preferences_general_patron_title" = "Staňte se členem";
 "preferences_general_external_contact" = "Kontakt";
 "preferences_general_meeting_bar_description" = "MeetingBar je open-source aplikace, kterou vytvořil Andrii Leitsius 🇺🇦\nCílem aplikace je usnadnit a zjednodušit práci s online schůzkami";
 "preferences_general_shortcut_toggle_meeting_name_visibility" = "Přepnout viditelnost nadpisu v řádku nabídek:";
