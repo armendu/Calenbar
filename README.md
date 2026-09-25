@@ -25,7 +25,7 @@ make build   # debug build in build/DerivedData/Build/Products/Debug
 make dmg     # release DMG in build/
 ```
 
-Pushing a version tag (`v5.1.0`) builds the DMG and publishes a GitHub release.
+To release, bump the version and add a `CHANGELOG.md` section for it. When that reaches `master`, the Release workflow tags the commit, builds the DMG and publishes it with that section as the release notes.
 
 ## Features
 
