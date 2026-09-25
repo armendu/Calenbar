@@ -23,9 +23,8 @@ body:
     label: Installation source
     description: How did you install Calenbar?
     options:
-    - AppStore
-    - Homebrew
-    - manually
+    - GitHub release (DMG)
+    - Built from source
   validations:
     required: true
 - type: dropdown

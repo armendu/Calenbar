@@ -19,7 +19,7 @@ XCFILTER := $(shell command -v xcbeautify >/dev/null 2>&1 && echo 'xcbeautify --
 # Append a JUnit report to app-hosted test runs when xcbeautify is available.
 JUNIT_REPORT := $(shell command -v xcbeautify >/dev/null 2>&1 && echo '--report junit --report-path $(BUILD_DIR)/test-results')
 
-.PHONY: build build-quiet build-release test test-quiet test-app test-app-quiet test-logic test-logic-quiet coverage coverage-report coverage-logic-report coverage-app-report coverage-gate test-summary coverage-codecov lint lint-fix open validate-strings
+.PHONY: build build-quiet build-release dmg test test-quiet test-app test-app-quiet test-logic test-logic-quiet coverage coverage-report coverage-logic-report coverage-app-report coverage-gate test-summary coverage-codecov lint lint-fix open validate-strings
 
 build:
 	@mkdir -p $(BUILD_DIR)
@@ -32,6 +32,12 @@ build-quiet:
 build-release:
 	@mkdir -p $(BUILD_DIR)
 	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration Release build
+
+# Universal Release build, signed ad hoc and packaged as build/Calenbar-<version>.dmg.
+dmg:
+	@mkdir -p $(BUILD_DIR)
+	@set -o pipefail; $(XCODEBUILD) -project $(PROJECT) -scheme $(SCHEME) -destination 'generic/platform=macOS' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile -configuration Release build ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO $(LOCAL_CODESIGN_FLAGS) 2>&1 | $(XCFILTER)
+	@Scripts/make_dmg.sh $(DERIVED_DATA_DIR)/Build/Products/Release/Calenbar.app $(BUILD_DIR)
 
 test: test-logic test-app
 

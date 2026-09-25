@@ -1,0 +1,69 @@
+name: Release
+
+# Pushing a tag like v5.1.0 builds Calenbar-5.1.0.dmg and publishes it as a
+# GitHub release, with that version's CHANGELOG.md section as the notes.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  release:
+    name: Build DMG and publish
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$DEVELOPER_DIR" && xcodebuild -version
+
+      - name: Build DMG
+        run: make dmg
+
+      - name: Check the tag matches the app version
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+            build/DerivedData/Build/Products/Release/Calenbar.app/Contents/Info.plist)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match the app version $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Extract release notes
+        run: |
+          # The CHANGELOG.md section for this version, without its heading.
+          awk -v v="$VERSION" '
+            index($0, "## " v) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > build/release-notes.md
+          cat >> build/release-notes.md <<'EOF'
+
+          ---
+
+          Calenbar isn't signed with an Apple Developer ID. After dragging it to Applications, open it once, then allow it in System Settings › Privacy & Security › Open Anyway.
+          EOF
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "build/Calenbar-$VERSION.dmg" \
+            --title "Calenbar $VERSION" \
+            --notes-file build/release-notes.md
