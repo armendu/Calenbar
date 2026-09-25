@@ -27,14 +27,9 @@ enum TitleTruncationRules {
 }
 
 enum Links {
-    static let patreon = URL(string: "https://www.patreon.com/meetingbar")!
-    static let buymeacoffee = URL(string: "https://www.buymeacoffee.com/meetingbar")!
-    static let github = URL(string: "https://github.com/leits/MeetingBar")!
-    static let telegram = URL(string: "https://t.me/leits")!
-    static let twitter = URL(string: "https://twitter.com/leits_dev")!
-    static let emailMe = URL(string: "mailto:leits.dev@gmail.com?subject=MeetingBar")!
     static let calendarPreferences = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
-    static let rateAppInAppStore = URL(string: "itms-apps://apps.apple.com/app/id1532419400?action=write-review")!
+    static let calenbarGitHub = URL(string: "https://github.com/armendu/Calenbar")!
+    static let calenbarIssues = URL(string: "https://github.com/armendu/Calenbar/issues")!
 }
 
 enum TimeFormat: String, Defaults.Serializable, Codable, CaseIterable {
@@ -48,6 +43,14 @@ enum EventTitleIconFormat: String, Defaults.Serializable, Codable, CaseIterable 
     case appicon = "AppIcon"
     case eventtype = "ms_teams_icon"
     case none = "no_online_session"
+}
+
+/// Color of the event icons in the panel and menu.
+enum PanelIconColor: String, Defaults.Serializable, Codable, CaseIterable {
+    /// White in dark mode, black in light mode.
+    case monochrome
+    /// The system tint, which follows the accent color in System Settings.
+    case accent
 }
 
 enum EventTitleFormat: String, Defaults.Serializable, Codable, CaseIterable {

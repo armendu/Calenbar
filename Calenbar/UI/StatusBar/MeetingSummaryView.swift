@@ -36,15 +36,13 @@ struct MeetingSummaryView: View {
                     .lineLimit(1)
             }
 
-            if onJoin != nil {
+            if let onJoin {
                 Spacer(minLength: 8)
-                Text("notifications_meetingbar_join_event_action".loco())
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(Color.accentColor))
-                    .opacity(isHovered ? 1.0 : 0.9)
+                // The system's prominent glass button: the panel's one
+                // control with a colored background, as the HIG suggests.
+                Button("notifications_meetingbar_join_event_action".loco(), action: onJoin)
+                    .buttonStyle(.glassProminent)
+                    .fontWeight(.semibold)
             }
         }
         .padding(.horizontal, 12)
@@ -66,6 +64,8 @@ struct MeetingSummaryView: View {
         .contentShape(Rectangle())
         .calenbarRowHover(pointingHand: onJoin != nil) { isHovered = $0 }
         .onTapGesture { onJoin?() }
+        .accessibilityElement(children: .combine)
+        .calenbarAccessibilityButton(onJoin)
     }
 }
 

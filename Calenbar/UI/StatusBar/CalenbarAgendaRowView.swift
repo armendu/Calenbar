@@ -41,6 +41,7 @@ struct CalenbarAgendaRowView: View {
         .accessibilityHint(onSelect != nil ? "calenbar_panel_agenda_row_accessibility_hint".loco() : "")
         .calenbarRowHover(pointingHand: onSelect != nil) { isHovered = $0 }
         .onTapGesture { onSelect?() }
+        .calenbarAccessibilityButton(onSelect)
     }
 }
 

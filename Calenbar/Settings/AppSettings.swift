@@ -210,7 +210,7 @@ extension AppSettings {
                 filterEventRegexes: [],
                 dismissedEvents: [],
                 ongoingEventVisibility: .showTenMinBeforeNext,
-                showEventMaxTimeUntilEventEnabled: false,
+                showEventMaxTimeUntilEventEnabled: true,
                 showEventMaxTimeUntilEventThreshold: 60
             ),
             statusBar: StatusBarSettings(

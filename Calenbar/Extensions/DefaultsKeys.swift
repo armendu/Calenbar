@@ -63,6 +63,7 @@ extension Defaults.Keys {
 
     static let eventTitleIconFormat = Key<EventTitleIconFormat>(
         "eventTitleIconFormat", default: .calendar)
+    static let panelIconColor = Key<PanelIconColor>("panelIconColor", default: .monochrome)
     static let statusbarEventTitleLength = Key<Int>(
         "statusbarEventTitleLength", default: statusbarEventTitleLengthLimits.max)
 
@@ -92,7 +93,7 @@ extension Defaults.Keys {
     static let showEventMaxTimeUntilEventThreshold = Key<Int>(
         "showEventMaxTimeUntilEventThreshold", default: 60)
     static let showEventMaxTimeUntilEventEnabled = Key<Bool>(
-        "showEventMaxTimeUntilEventEnabled", default: false)
+        "showEventMaxTimeUntilEventEnabled", default: true)
 
     // appearance of pending events should be shown in the statusbar and menu
     static let showPendingEvents = Key<PendingEventsAppereance>(

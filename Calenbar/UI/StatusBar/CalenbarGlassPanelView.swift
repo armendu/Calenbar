@@ -47,7 +47,7 @@ struct CalenbarGlassPanelView: View {
                     CalenbarBadge {
                         Image(nsImage: MenuStyleConstants.todaysDateIcon(pointSize: 15))
                             .renderingMode(.template)
-                            .foregroundStyle(.primary)
+                            .modifier(CalenbarIconColor())
                     }
                     Text(viewModel.emptyStateMessage ?? "")
                         .font(.callout)
@@ -105,10 +105,12 @@ private struct MoreRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .calenbarRowBubble(hovered: isHovered)
         .contentShape(Rectangle())
-        .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
-        .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
         .calenbarRowHover { isHovered = $0 }
         .onTapGesture(perform: onShowClassicMenu)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
+        .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
+        .calenbarAccessibilityButton(onShowClassicMenu)
     }
 }
 
@@ -122,6 +124,16 @@ extension View {
             ConcentricRectangle(corners: .concentric(minimum: 10))
                 .fill(Color.primary.opacity(hovered ? 0.16 : 0.06))
         )
+    }
+}
+
+/// The panel's rows are tap-gesture views rather than `Button`s (a button
+/// style can't see hover), so they tell VoiceOver they're buttons and what
+/// pressing them does. Rows without an action stay plain elements.
+extension View {
+    func calenbarAccessibilityButton(_ action: (() -> Void)?) -> some View {
+        accessibilityAddTraits(action != nil ? .isButton : [])
+            .accessibilityAction { action?() }
     }
 }
 

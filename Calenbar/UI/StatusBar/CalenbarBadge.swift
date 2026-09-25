@@ -3,6 +3,7 @@
 //  Calenbar
 //
 
+import Defaults
 import SwiftUI
 
 /// The circular badge at the start of each panel row, like the icon circles
@@ -21,35 +22,45 @@ struct CalenbarBadge<Content: View>: View {
     }
 }
 
-/// An event's badge: accent for a meeting happening now, the meeting
-/// service's logo on white, or a plain calendar symbol.
+/// Colors an event icon per the "Icon color" preference. The HIG allows
+/// color on symbols, and keeps colored backgrounds for the one primary
+/// action (Join), so badge circles stay neutral either way.
+struct CalenbarIconColor: ViewModifier {
+    @Default(.panelIconColor) private var iconColor
+
+    func body(content: Content) -> some View {
+        switch iconColor {
+        case .monochrome: content.foregroundStyle(.primary)
+        case .accent: content.foregroundStyle(.tint)
+        }
+    }
+}
+
+/// An event's badge: a meeting service's logo, or a symbol (video for a
+/// meeting happening now, calendar otherwise).
 struct CalenbarEventBadge: View {
     let badge: CalenbarRowBadge
     var size: CGFloat = 26
 
     var body: some View {
-        switch badge {
-        case .live(let hasMeeting):
-            CalenbarBadge(size: size, fill: .accentColor) {
-                symbol(hasMeeting ? "video.fill" : "calendar", color: .white)
-            }
-        case .service(let service):
-            CalenbarBadge(size: size, fill: .white) {
+        CalenbarBadge(size: size) {
+            switch badge {
+            case .live(let hasMeeting):
+                symbol(hasMeeting ? "video.fill" : "calendar")
+            case .service(let service):
                 Image(nsImage: getIconForMeetingService(service))
                     .resizable()
                     .scaledToFit()
                     .frame(width: size * 0.57, height: size * 0.57)
-            }
-        case .plain:
-            CalenbarBadge(size: size) {
-                symbol("calendar", color: .primary)
+            case .plain:
+                symbol("calendar")
             }
         }
     }
 
-    private func symbol(_ name: String, color: Color) -> some View {
+    private func symbol(_ name: String) -> some View {
         Image(systemName: name)
             .font(.system(size: size * 0.46, weight: .semibold))
-            .foregroundStyle(color)
+            .modifier(CalenbarIconColor())
     }
 }

@@ -149,6 +149,9 @@
 "calenbar_threshold_4_hours" = "4 hours before";
 "calenbar_threshold_8_hours" = "8 hours before";
 "preferences_appearance_menu_title" = "Menu";
+"preferences_appearance_menu_icon_color_title" = "Icon color";
+"preferences_appearance_menu_icon_color_monochrome_value" = "Monochrome";
+"preferences_appearance_menu_icon_color_accent_value" = "Accent color";
 "preferences_appearance_menu_show_timeline_toggle" = "Show visual timeline of the day";
 "preferences_appearance_menu_shorten_event_title_toggle" = "Shorten event title to";
 "preferences_appearance_menu_shorten_event_title_stepper" = "%d characters";
@@ -317,6 +320,8 @@
 "status_bar_hide_meeting_names" = "Hide meeting title";
 "status_bar_whats_new" = "What's new?";
 "status_bar_rate_app" = "Rate App";
+"preferences_general_star_on_github" = "Star on GitHub";
+"preferences_general_report_issue" = "Report an Issue";
 "status_bar_preferences" = "Preferences";
 "status_bar_quit" = "Quit Calenbar";
 "status_bar_no_title" = "No title";

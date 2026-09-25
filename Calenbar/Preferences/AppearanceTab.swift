@@ -313,6 +313,7 @@ struct MenuSection: View {
     @Default(.showMeetingServiceIcon) var showMeetingServiceIcon
     @Default(.showEventCalendarColor) var showEventCalendarColor
     @Default(.showTimelineInMenu) var showTimelineInMenu
+    @Default(.panelIconColor) var panelIconColor
 
     var body: some View {
         Section(header: Text("preferences_appearance_menu_title".loco())) {
@@ -320,6 +321,15 @@ struct MenuSection: View {
                 preferenceLabel("preferences_appearance_menu_show_timeline_toggle"),
                 isOn: $showTimelineInMenu
             )
+            Picker(
+                preferenceLabel("preferences_appearance_menu_icon_color_title"),
+                selection: $panelIconColor
+            ) {
+                Text("preferences_appearance_menu_icon_color_monochrome_value".loco())
+                    .tag(PanelIconColor.monochrome)
+                Text("preferences_appearance_menu_icon_color_accent_value".loco())
+                    .tag(PanelIconColor.accent)
+            }
         }
 
         Section(header: Text(preferenceLabel("preferences_appearance_menu_show_event_title"))) {
