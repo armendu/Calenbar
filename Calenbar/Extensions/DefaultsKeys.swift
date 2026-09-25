@@ -62,7 +62,7 @@ extension Defaults.Keys {
     static let eventTimeFormat = Key<EventTimeFormat>("eventTimeFormat", default: .show)
 
     static let eventTitleIconFormat = Key<EventTitleIconFormat>(
-        "eventTitleIconFormat", default: .none)
+        "eventTitleIconFormat", default: .calendar)
     static let statusbarEventTitleLength = Key<Int>(
         "statusbarEventTitleLength", default: statusbarEventTitleLengthLimits.max)
 
@@ -76,7 +76,7 @@ extension Defaults.Keys {
     static let showTimelineInMenu = Key<Bool>("showTimelineInMenu", default: true)
     // if the event title in the menu should be shortened or not -> the length will be stored in field menuEventTitleLength
     static let shortenEventTitle = Key<Bool>("shortenEventTitle", default: true)
-    static let menuEventTitleLength = Key<Int>("menuEventTitleLength", default: 50)
+    static let menuEventTitleLength = Key<Int>("menuEventTitleLength", default: 30)
 
     static let showEventDetails = Key<Bool>("showEventDetails", default: false)
     static let showMeetingServiceIcon = Key<Bool>("showMeetingServiceIcon", default: true)

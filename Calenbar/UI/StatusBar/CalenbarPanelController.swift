@@ -6,29 +6,15 @@
 import AppKit
 import SwiftUI
 
-/// Hosts the Liquid Glass panel (`CalenbarGlassPanelView`) in a custom,
-/// non-activating `NSPanel` anchored under the status item, shown on
-/// left-click in place of `StatusBarItemController.openMenu()`.
-///
-/// Right-click's existing behavior (`joinNextMeeting()`, an instant-join
-/// shortcut — NOT a menu trigger, confirmed by reading the current
-/// `statusMenuBarAction`) is untouched. The classic `NSMenu`
-/// (`StatusBarItemController.openMenu()`) is still reachable from inside the
-/// panel via its "More…" row (see `CalenbarGlassPanelView.onShowClassicMenu`)
-/// rather than being bound to right-click, so every existing feature that
-/// only lives in the classic menu stays reachable — right-click's shortcut
-/// just isn't sacrificed to make room for it.
-/// `NSHostingView` subclass that accepts the first mouse click. The panel
-/// deliberately never becomes key (see `show`), and AppKit's default
-/// `acceptsFirstMouse(for:)` is `false` — without this override, every click
-/// inside a permanently-non-key panel (Join, an agenda row, "More…") would
-/// be swallowed just to activate the panel's window, requiring a second
-/// click to actually register. This is the standard fix for this well-known
-/// AppKit gotcha with custom status-item popups.
+/// Accepts the first click. The panel never becomes key, so without this the
+/// first click on Join or a row would only activate the window.
 private final class CalenbarPanelHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
+/// Shows the Liquid Glass panel in a non-activating `NSPanel` under the
+/// status item on left-click. Right-click still joins the next meeting, and
+/// the classic menu stays reachable through the panel's "More…" row.
 @MainActor
 final class CalenbarPanelController: NSObject {
     private var panel: NSPanel?
@@ -38,9 +24,8 @@ final class CalenbarPanelController: NSObject {
 
     var isVisible: Bool { panel != nil }
 
-    /// Shows the panel if hidden, hides it if already showing (mirrors
-    /// `NSMenu.popUp`'s toggle-on-reclick behavior, which `openMenu()`
-    /// previously got for free from AppKit).
+    /// Shows the panel, or hides it if it's already open (like clicking a
+    /// menu's title again).
     func toggle(
         near button: NSStatusBarButton,
         viewModel: CalenbarPanelViewModel,
@@ -61,11 +46,7 @@ final class CalenbarPanelController: NSObject {
         )
     }
 
-    /// Rebuilds the panel's content in place while it's open, without
-    /// changing its position/visibility — called on every tick of the same
-    /// refresh pipeline that drives `StatusBarItemController.updateTitle()`,
-    /// so a countdown visible in the open panel ticks down live instead of
-    /// freezing at whatever it read when the panel opened.
+    /// Updates the open panel's content in place, so its countdown keeps ticking.
     func refresh(viewModel: CalenbarPanelViewModel) {
         guard let hostingView else { return }
         hostingView.rootView = CalenbarGlassPanelView(
@@ -90,13 +71,7 @@ final class CalenbarPanelController: NSObject {
             onShowClassicMenu: { [weak self] in self?.dismissThenPerform(onShowClassicMenu) }
         )
         let hosting = CalenbarPanelHostingView(rootView: panelView)
-        // On-device testing showed fittingSize.width is NOT trustworthy for
-        // this view: GlassEffectContainer content can report an "ideal"
-        // intrinsic width that ignores CalenbarGlassPanelView's own
-        // `.frame(width:)` constraint, producing a panel that stretched to
-        // fill most of the screen instead of staying at the intended 320pt.
-        // The width is a compile-time-known constant regardless — only ask
-        // fittingSize for the height, measured at that fixed width.
+        // The width is fixed; only the height depends on the content.
         let targetWidth = CalenbarGlassPanelView.width
         hosting.frame = NSRect(x: 0, y: 0, width: targetWidth, height: 1)
         hosting.layoutSubtreeIfNeeded()
@@ -110,9 +85,7 @@ final class CalenbarPanelController: NSObject {
             defer: false
         )
         panel.contentView = hosting
-        // .statusBar level + .nonactivatingPanel keeps this above normal
-        // windows without activating the app or stealing key focus from
-        // whatever app was frontmost when the status item was clicked.
+        // Floats above normal windows without stealing focus from the front app.
         panel.level = .statusBar
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -139,11 +112,7 @@ final class CalenbarPanelController: NSObject {
         )
         let visible = screen.visibleFrame
         origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
-        // Clamp both edges, not just the bottom: today's agenda is bounded
-        // to one day's events so this shouldn't trigger in practice, but an
-        // unusually tall panel (e.g. a day packed with meetings) should
-        // still be pulled down to fit on-screen rather than clipped off the
-        // top, the same way the bottom edge is already handled.
+        // Keep a very tall panel (a packed day) on screen at both edges.
         origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
         panel.setFrameOrigin(origin)
     }
@@ -151,48 +120,28 @@ final class CalenbarPanelController: NSObject {
     func dismiss() {
         removeDismissalMonitors()
         panel?.orderOut(nil)
+        // Detach the content so hovered rows get viewWillMove(toWindow: nil)
+        // and release their cursor; releasing the panel alone doesn't.
+        panel?.contentView = nil
         panel = nil
         hostingView = nil
     }
 
-    /// Dismisses the panel, then invokes `action` — order matters. Used for
-    /// `onShowClassicMenu`: `openMenu()`'s `performClick(nil)` blocks for as
-    /// long as the classic NSMenu is tracking, so `action` must never
-    /// observe the glass panel still on screen (previously it did, since
-    /// dismiss ran *after* the callback — two floating panels stacked on
-    /// screen for the whole time the classic menu was open, which read as
-    /// broken and put "Quit Calenbar" right where someone reaching to
-    /// dismiss the confusion would click). `internal`, not `private`, so
-    /// this ordering guarantee is directly unit-testable without needing a
-    /// live NSPanel/NSStatusBarButton.
+    /// Closes the panel before running `action`. Opening the classic menu
+    /// blocks while it tracks, so closing afterwards would leave the panel and
+    /// the menu on screen together.
     func dismissThenPerform(_ action: () -> Void) {
         dismiss()
         action()
     }
 
-    /// `ignoring button`: `toggle()` already handles "click the status item
-    /// again to close," so this monitor only needs to handle *outside*
-    /// clicks. Global monitors only observe events sent to other
-    /// applications (per Apple's docs), so a click on our own status item
-    /// button likely never reaches this handler in the first place — the
-    /// `clickedStatusItemButton` guard below may be belt-and-suspenders
-    /// rather than load-bearing; kept for now, worth re-checking once this
-    /// can be click-tested on a device.
+    /// Closes the panel on an outside click, Esc, app deactivation or display
+    /// sleep. Clicks on the status item itself are left to `toggle()`.
     private func installDismissalMonitors(ignoring button: NSStatusBarButton) {
-        // Esc is handled on the *global* monitor, not a local one: this
-        // panel deliberately never becomes key (see `show`), so the real key
-        // window stays whatever other app's window was key before — a local
-        // monitor (events sent to this app) wouldn't see an Esc press
-        // delivered there. A global monitor (events sent to other apps) is
-        // exactly why click-outside detection below already needed one; Esc
-        // rides along on the same monitor for the same reason.
-        //
-        // CAVEAT, unresolved — needs a real device to confirm: global
-        // *keyboard* monitors (unlike mouse ones) require the user to have
-        // granted Input Monitoring (System Settings → Privacy & Security).
-        // Nothing here requests that permission, so this Esc path likely
-        // silently no-ops on a typical first run. The other four dismissal
-        // triggers don't depend on it and stay reliable regardless.
+        // Esc arrives at the frontmost app (the panel is never key), so it
+        // needs the global monitor. macOS only delivers global key events with
+        // Input Monitoring permission, which isn't requested; without it Esc
+        // does nothing and the other dismissal paths still work.
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self, weak button] event in
             guard let self else { return }
             if event.type == .keyDown {
@@ -204,9 +153,7 @@ final class CalenbarPanelController: NSObject {
             guard !clickedStatusItemButton else { return }
             self.dismiss()
         }
-        // Defensive fallback for the (normally unreachable, since the panel
-        // isn't key) case where Esc somehow lands locally — harmless to
-        // keep, global monitors can't cover events sent to this app itself.
+        // Global monitors never see this app's own events; catch Esc here too.
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             if event.keyCode == kVK_Escape {
@@ -223,14 +170,7 @@ final class CalenbarPanelController: NSObject {
             self, selector: #selector(dismissFromNotification),
             name: NSWorkspace.screensDidSleepNotification, object: nil
         )
-        // Screen *lock* is a distinct event from sleep, and is NOT handled
-        // here: the app already listens for it once, in
-        // LifecycleObserver/AppDelegate ("com.apple.screenIsLocked",
-        // forwarded as onScreenLocked), which now also calls
-        // calenbarPanelController.dismiss(). A second independent listener
-        // for the same fragile, string-keyed, undocumented system
-        // notification here would risk silently diverging from that one if
-        // either copy ever changed — better to have exactly one owner of it.
+        // Screen lock is handled by AppDelegate's existing lock observer.
     }
 
     private func removeDismissalMonitors() {
@@ -247,8 +187,5 @@ final class CalenbarPanelController: NSObject {
     }
 }
 
-/// `kVK_Escape` isn't exposed by a public AppKit/Carbon import in this
-/// target (only available via the deprecated Carbon HIToolbox headers) —
-/// its value (53) is a stable, documented virtual keycode constant, so it's
-/// declared directly rather than importing Carbon for one constant.
+/// Carbon's `kVK_Escape`, declared here to avoid importing Carbon.
 private let kVK_Escape: UInt16 = 53

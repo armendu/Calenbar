@@ -218,12 +218,10 @@ struct MenuBuilder {
             timeFormat: CalenbarTimeFormat(state.timeFormat),
             locale: I18N.instance.locale,
             now: now,
-            isFantasticalInstalled: isFantasticalInstalled,
             labels: .current
         )
         let summary = MeetingSummaryView(
             presentation: presentation,
-            providerIcon: getIconForMeetingService(presentation.meetingService),
             onJoin: onJoin
         )
         let hosting = NSHostingView(rootView: summary)
@@ -260,24 +258,7 @@ struct MenuBuilder {
 
         let dateString = dateFormatter.string(from: date)
         let dateTitle = "\(title) (\(dateString))"
-        let titleItem: NSMenuItem
-        if #available(macOS 14.0, *) {
-            titleItem = NSMenuItem.sectionHeader(title: dateTitle)
-        } else {
-            titleItem = NSMenuItem(title: dateTitle, action: nil, keyEquivalent: "")
-            titleItem.attributedTitle = NSAttributedString(
-                string: dateTitle,
-                attributes: [
-                    .font: NSFont.systemFont(
-                        ofSize: MenuStyleConstants.defaultFontSize - 2,
-                        weight: .semibold
-                    ),
-                    .foregroundColor: NSColor.secondaryLabelColor
-                ])
-            titleItem.isEnabled = false
-        }
-
-        items.append(titleItem)
+        items.append(NSMenuItem.sectionHeader(title: dateTitle))
 
         // Events
         let sortedEvents = events.sorted {
@@ -308,6 +289,23 @@ struct MenuBuilder {
         }
 
         return items
+    }
+
+    // MARK: Named section -----------------------------------------------------
+
+    /// A section headed by a plain title (no date suffix) showing at most
+    /// `limit` visible events, soonest first. Adds nothing when none are visible.
+    func buildNamedSection(title: String, events: [MBEvent], limit: Int) -> [NSMenuItem] {
+        // Filter before limiting, so a hidden event can't use up the slot.
+        let visible = events
+            .filter { shouldRenderEvent($0) }
+            .sorted { $0.startDate < $1.startDate }
+            .prefix(limit)
+        guard !visible.isEmpty else { return [] }
+
+        let labels = CalenbarPanelLabels.current
+        return [NSMenuItem.sectionHeader(title: title)]
+            + visible.compactMap { makeEventItem($0, labels: labels) }
     }
 
     // MARK: Join section ------------------------------------------------------

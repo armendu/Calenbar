@@ -9,11 +9,7 @@ import XCTest
 
 final class StatusBarPresentationTests: XCTestCase {
     private let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    private let assets = StatusBarIconAssets(
-        appIcon: "AppIcon",
-        calendarCheckmark: "iconCalendarCheckmark",
-        calendar: "iconCalendar"
-    )
+    private let assets = StatusBarIconAssets(appIcon: "AppIcon")
 
     private func settings(
         hasSelectedCalendars: Bool = true,

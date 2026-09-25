@@ -69,7 +69,6 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         CalenbarPanelViewModel.build(
             from: state,
             now: now,
-            isFantasticalInstalled: false,
             locale: locale(),
             labels: labels
         )
@@ -256,7 +255,6 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let viewModel = CalenbarPanelViewModel.build(
             from: state,
             now: start.addingTimeInterval(-3600),
-            isFantasticalInstalled: false,
             locale: Locale(identifier: "en_US_POSIX"),
             labels: labels
         )
@@ -370,5 +368,46 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let viewModel = build(state)
 
         XCTAssertEqual(viewModel.summary?.eventTitle, "All-Hands")
+    }
+
+    // MARK: - Badges
+
+    private func row(isCurrent: Bool, service: MeetingServices?) -> CalenbarAgendaRow {
+        CalenbarAgendaRow(
+            id: "row",
+            title: "Row",
+            timeRangeText: "10:00 – 10:30",
+            meetingService: service,
+            isCurrent: isCurrent,
+            hasEnded: false
+        )
+    }
+
+    func testRunningEventBadgeIsLiveEvenWithAMeetingService() {
+        XCTAssertEqual(row(isCurrent: true, service: .zoom).badge, .live(hasMeeting: true))
+    }
+
+    func testRunningEventWithoutAMeetingServiceIsLiveWithoutMeeting() {
+        XCTAssertEqual(row(isCurrent: true, service: nil).badge, .live(hasMeeting: false))
+    }
+
+    func testUpcomingEventWithAMeetingServiceShowsTheService() {
+        XCTAssertEqual(row(isCurrent: false, service: .meet).badge, .service(.meet))
+    }
+
+    func testUpcomingEventWithoutAMeetingServiceIsPlain() {
+        XCTAssertEqual(row(isCurrent: false, service: nil).badge, .plain)
+    }
+
+    func testSummaryBadgeFollowsItsMeetingService() {
+        let withService = MeetingSummaryPresentation(
+            sectionTitle: "Next meeting", eventTitle: "Sync", metadata: [], meetingService: .teams
+        )
+        let without = MeetingSummaryPresentation(
+            sectionTitle: "Next meeting", eventTitle: "Sync", metadata: [], meetingService: nil
+        )
+
+        XCTAssertEqual(withService.badge, .service(.teams))
+        XCTAssertEqual(without.badge, .plain)
     }
 }

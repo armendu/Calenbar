@@ -15,17 +15,19 @@ enum MenuStyleConstants {
     static let defaultFontSize: CGFloat = 13
     static let runningIconName = "running_icon"
     static let appIconName = "AppIcon"
-    static let calendarCheckmarkIconName = "iconCalendarCheckmark"
-    static let calendarIconName = "iconCalendar"
     static let iconSize: NSSize = .init(width: 16, height: 16)
 
-    /// Deliberately smaller than the dropdown menu's `defaultFontSize` /
-    /// `iconSize`: the menu-bar button itself should sit lighter next to
-    /// other menu-bar items (matching e.g. Notion Calendar), not the fuller
-    /// weight that reads well inside the dropdown. Only the status-bar
-    /// button uses these — the classic menu keeps the larger sizes.
+    /// Smaller than the dropdown's `defaultFontSize` / `iconSize` so the
+    /// menu-bar button sits lighter next to other menu-bar items; the classic
+    /// menu keeps the larger sizes.
     static let statusBarFontSize: CGFloat = 12.5
+    /// The two-line layout's title and time sizes.
+    static let stackedTitleFontSize: CGFloat = statusBarFontSize - 1
+    static let stackedTimeFontSize: CGFloat = 8
     static let statusBarIconSize: NSSize = .init(width: 15, height: 15)
+    /// A touch larger than the other status icons so the day number stays legible.
+    static let todaysDateIconSize: CGFloat = 17
+    static let statusBarIconTitleGap: CGFloat = 4
 
     /// Loads a named asset; if the asset is missing or has been renamed,
     /// falls back to the bundle's runtime app icon and finally to a 1x1
@@ -41,28 +43,71 @@ enum MenuStyleConstants {
         return NSImage(size: NSSize(width: 1, height: 1))
     }
 
-    /// The real Calendar.app icon, which macOS renders with today's actual
-    /// date baked in — used wherever the app wants a "today" glyph (the
-    /// status bar's no-upcoming-events icon, the glass panel's empty state)
-    /// instead of a static checkmark/calendar asset.
-    static var todaysCalendarIcon: NSImage {
-        let candidatePaths = [
-            "/System/Applications/Calendar.app",
-            "/Applications/Calendar.app"
-        ]
-        for path in candidatePaths where FileManager.default.fileExists(atPath: path) {
-            return NSWorkspace.shared.icon(forFile: path)
-        }
-        return NSImage(systemSymbolName: "calendar", accessibilityDescription: nil)
-            ?? iconNamed(calendarIconName)
+    /// A copy of `image` at the status-bar size. `NSImage(named:)` hands out
+    /// shared instances that the classic menu resizes too, so resizing one in
+    /// place would make the two fight over its size.
+    static func statusBarIcon(_ image: NSImage) -> NSImage {
+        guard let copy = image.copy() as? NSImage else { return image }
+        copy.size = statusBarIconSize
+        return copy
     }
 
-    /// Returns a copy of `image` widened by `gap` points of transparent
-    /// space on its trailing edge, so a title drawn immediately after it
-    /// (`NSStatusBarButton.imagePosition == .imageLeft`) has visual
-    /// breathing room instead of butting directly against the icon.
-    /// Preserves `isTemplate` so template icons keep auto-tinting with the
-    /// menu bar's light/dark appearance.
+    /// A calendar glyph with today's day-of-month drawn inside it, used as
+    /// the "today" icon when there's no meeting to show. Drawn rather than
+    /// reusing the real Calendar.app icon, whose own date is illegible at
+    /// menu-bar size. A template image, so it tints to the menu bar's
+    /// appearance. `pointSize` is the square size; the number scales with it.
+    static func todaysDateIcon(pointSize: CGFloat) -> NSImage {
+        let day = Calendar.current.component(.day, from: Date())
+        let size = NSSize(width: pointSize, height: pointSize)
+        let image = NSImage(size: size, flipped: false) { _ in
+            let body = NSRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)
+            NSColor.black.setStroke()
+            NSColor.black.setFill()
+
+            // Rounded page with a solid header strip, so it reads as a calendar.
+            let radius = body.width * 0.22
+            let outline = NSBezierPath(roundedRect: body, xRadius: radius, yRadius: radius)
+            outline.lineWidth = max(pointSize * 0.09, 1)
+            outline.stroke()
+
+            let headerHeight = body.height * 0.28
+            let header = NSRect(
+                x: body.minX, y: body.maxY - headerHeight,
+                width: body.width, height: headerHeight
+            )
+            NSGraphicsContext.saveGraphicsState()
+            outline.addClip()  // header corners follow the page's rounding
+            NSBezierPath(rect: header).fill()
+            NSGraphicsContext.restoreGraphicsState()
+
+            // Day number below the header, sized to clear the outline (two
+            // digits usually hit the width limit first).
+            let numberArea = NSRect(
+                x: body.minX, y: body.minY,
+                width: body.width, height: body.height - headerHeight
+            )
+            let fontSize = min(numberArea.height * 0.78, numberArea.width * 0.56)
+            let font = NSFont.systemFont(ofSize: fontSize, weight: .heavy)
+            let text = NSAttributedString(
+                string: "\(day)",
+                attributes: [.font: font, .foregroundColor: NSColor.black]
+            )
+            // Center on the digits' cap height; the line box includes descender
+            // space digits don't use, which would leave them sitting high.
+            let textSize = text.size()
+            text.draw(at: NSPoint(
+                x: numberArea.midX - textSize.width / 2,
+                y: numberArea.midY - abs(font.descender) - font.capHeight / 2
+            ))
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    /// A copy of `image` with `gap` points of empty space on the right, to
+    /// separate it from the title. Keeps template rendering.
     static func iconWithTrailingGap(_ image: NSImage, gap: CGFloat) -> NSImage {
         let newSize = NSSize(width: image.size.width + gap, height: image.size.height)
         let padded = NSImage(size: newSize, flipped: false) { rect in
@@ -117,8 +162,9 @@ final class StatusBarItemController {
         ])
 
         // Temporary icon and menu before app delegate setup
-        statusItem.button?.image = MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
-        statusItem.button?.image?.size = MenuStyleConstants.statusBarIconSize
+        statusItem.button?.image = MenuStyleConstants.statusBarIcon(
+            MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
+        )
         statusItem.button?.imagePosition = .imageLeft
         let menuItem = statusItemMenu.addItem(
             withTitle: "window_title_onboarding".loco(), action: nil, keyEquivalent: "")
@@ -220,26 +266,12 @@ final class StatusBarItemController {
         let event = NSApp.currentEvent
 
         if event?.type == .rightMouseUp {
-            // Right button click — instant-join shortcut, unchanged by the
-            // Calenbar glass panel below (this was never a menu trigger).
+            // Right click: instant join.
             joinNextMeeting()
         } else if event == nil || event?.type == .leftMouseUp {
-            // Left click now shows the Liquid Glass panel instead of the
-            // classic NSMenu directly. The classic menu (openMenu(), below)
-            // is still reachable from the panel's "More…" row.
-            //
-            // Deliberately NOT handling .leftMouseDown here, even though
-            // button.sendAction(on:) above still requests it: that was
-            // needed for the old openMenu() → performClick() path (which
-            // blocked inside NSMenu's own tracking loop, so a same-click
-            // .leftMouseUp resend was effectively absorbed by the time it
-            // arrived). CalenbarPanelController.toggle() is synchronous and
-            // non-blocking, so acting on both .leftMouseDown and
-            // .leftMouseUp would call showCalenbarPanel() twice per click —
-            // open, then immediately close again before the panel is ever
-            // visible. Only responding on mouse-up (a completed click, or
-            // an accessibility/AppleScript-triggered click reporting no
-            // event) avoids that.
+            // Left click: the glass panel. Only on mouse-up: toggle() doesn't
+            // block like the old menu did, so also acting on mouse-down would
+            // open and immediately close the panel. (`nil` = a scripted click.)
             showCalenbarPanel()
         }
     }
@@ -271,7 +303,6 @@ final class StatusBarItemController {
         return CalenbarPanelViewModel.build(
             from: CalenbarPanelStateInput(menuState),
             now: Date(),
-            isFantasticalInstalled: checkIsFantasticalInstalled(),
             locale: I18N.instance.locale,
             labels: .current
         )
@@ -282,10 +313,7 @@ final class StatusBarItemController {
     }
 
     func updateTitle() {
-        // Keep the glass panel's countdown/agenda live while it's open —
-        // this runs on the same refresh pipeline (Defaults changes + the
-        // periodic CalendarSync timer) that already drives the status item
-        // title, rather than a separate timer of its own.
+        // Keep an open panel's countdown in step with the title.
         if calenbarPanelController.isVisible {
             calenbarPanelController.refresh(viewModel: currentCalenbarPanelViewModel())
         }
@@ -317,15 +345,12 @@ final class StatusBarItemController {
 
         switch presentation.icon {
         case .asset(let name):
-            button.image = MenuStyleConstants.iconNamed(name)
-            button.image?.size = MenuStyleConstants.statusBarIconSize
+            button.image = MenuStyleConstants.statusBarIcon(MenuStyleConstants.iconNamed(name))
         case .meetingService(let service):
-            let icon = getIconForMeetingService(service)
-            icon.size = MenuStyleConstants.statusBarIconSize
-            button.image = icon
+            // Provider logos keep their own (often non-square) size.
+            button.image = getIconForMeetingService(service)
         case .todaysDate:
-            button.image = MenuStyleConstants.todaysCalendarIcon
-            button.image?.size = MenuStyleConstants.statusBarIconSize
+            button.image = MenuStyleConstants.todaysDateIcon(pointSize: MenuStyleConstants.todaysDateIconSize)
         case .none:
             break
         }
@@ -338,17 +363,13 @@ final class StatusBarItemController {
 
         ensureStatusBarButtonIsVisible(button)
 
-        // A title is about to be drawn right after the icon with no gap —
-        // widen the icon's own canvas with transparent trailing space so
-        // the title doesn't butt directly against it. Done at the image
-        // level, not by padding the title string: a leading space on the
-        // title changes what "the button's title" *is* (breaking `hasPrefix`
-        // and exact-match assertions across the test suite, and a
-        // paragraph-style indent was tried and reverted — it shifted the
-        // text's drawn position without growing the button's computed
-        // width to match, silently clipping the tail of longer titles).
+        // Pad the icon (not the title string) to gap it from the title:
+        // `imageLeft` leaves no configurable spacing, and padding the string
+        // instead would change the button's title and clip its tail.
         if button.imagePosition == .imageLeft, !button.attributedTitle.string.isEmpty {
-            button.image = button.image.map { MenuStyleConstants.iconWithTrailingGap($0, gap: 4) }
+            button.image = button.image.map {
+                MenuStyleConstants.iconWithTrailingGap($0, gap: MenuStyleConstants.statusBarIconTitleGap)
+            }
         }
     }
 
@@ -361,8 +382,9 @@ final class StatusBarItemController {
               button.attributedTitle.string.isEmpty
         else { return }
 
-        button.image = MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
-        button.image?.size = MenuStyleConstants.statusBarIconSize
+        button.image = MenuStyleConstants.statusBarIcon(
+            MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName)
+        )
         button.imagePosition = .imageLeft
     }
 
@@ -410,6 +432,16 @@ final class StatusBarItemController {
                 statusItemMenu.items += builder.buildDateSection(
                     date: tomorrow, title: "status_bar_section_tomorrow".loco(),
                     events: menuState.tomorrowEvents)
+            }
+
+            let thisWeek = builder.buildNamedSection(
+                title: "status_bar_section_this_week".loco(),
+                events: menuState.thisWeekEvents,
+                limit: 1
+            )
+            if !thisWeek.isEmpty {
+                statusItemMenu.addItem(NSMenuItem.separator())
+                statusItemMenu.items += thisWeek
             }
         }
         statusItemMenu.addItem(NSMenuItem.separator())
@@ -605,10 +637,10 @@ enum StatusBarTitleRenderer {
         case .none:
             return NSAttributedString(string: "")
         case .inline(let showTime):
-            var eventTitle = presentation.title
-            if showTime {
-                eventTitle += " " + presentation.time
-            }
+            let eventTitle = StatusBarTitlePolicy.inlineText(
+                title: presentation.title,
+                time: showTime ? presentation.time : ""
+            )
             return NSAttributedString(
                 string: eventTitle,
                 attributes: titleAttributes(
@@ -626,7 +658,7 @@ enum StatusBarTitleRenderer {
             string: presentation.title,
             attributes: titleAttributes(
                 style: presentation.titleStyle,
-                font: NSFont.systemFont(ofSize: MenuStyleConstants.statusBarFontSize - 1),
+                font: NSFont.systemFont(ofSize: MenuStyleConstants.stackedTitleFontSize),
                 baselineOffset: -3
             )
         )
@@ -634,7 +666,7 @@ enum StatusBarTitleRenderer {
             NSAttributedString(
                 string: "\n" + presentation.time,
                 attributes: [
-                    NSAttributedString.Key.font: NSFont.systemFont(ofSize: 8),
+                    NSAttributedString.Key.font: NSFont.systemFont(ofSize: MenuStyleConstants.stackedTimeFontSize),
                     NSAttributedString.Key.foregroundColor: NSColor.lightGray
                 ]
             ))

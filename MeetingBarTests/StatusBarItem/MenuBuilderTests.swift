@@ -357,7 +357,6 @@ final class MenuBuilderTests: BaseTestCase {
             timeFormat: CalenbarTimeFormat(state.timeFormat),
             locale: I18N.instance.locale,
             now: now,
-            isFantasticalInstalled: false,
             labels: .current
         )
 
@@ -389,7 +388,6 @@ final class MenuBuilderTests: BaseTestCase {
             timeFormat: CalenbarTimeFormat(state.timeFormat),
             locale: I18N.instance.locale,
             now: now,
-            isFantasticalInstalled: false,
             labels: .current
         )
 
@@ -1306,8 +1304,9 @@ final class StatusBarTitleRendererTests: BaseTestCase {
                 at: title.length - 1,
                 effectiveRange: nil
             ) as? NSFont
-        XCTAssertEqual(titleFont?.pointSize ?? 0, 12, accuracy: 0.001)
-        XCTAssertEqual(timeFont?.pointSize ?? 0, 9, accuracy: 0.001)
+        XCTAssertEqual(titleFont?.pointSize ?? 0, MenuStyleConstants.stackedTitleFontSize, accuracy: 0.001)
+        XCTAssertEqual(timeFont?.pointSize ?? 0, MenuStyleConstants.stackedTimeFontSize, accuracy: 0.001)
+        XCTAssertLessThan(MenuStyleConstants.stackedTimeFontSize, MenuStyleConstants.stackedTitleFontSize)
     }
 
     func test_inlineTitleIncludesTimeAndUnderlineStyle() {
@@ -1318,7 +1317,7 @@ final class StatusBarTitleRendererTests: BaseTestCase {
             )
         )
 
-        XCTAssertEqual(title.string, "Weekly sync now")
+        XCTAssertEqual(title.string, "Weekly sync · now")
         XCTAssertNotNil(title.attribute(.underlineStyle, at: 0, effectiveRange: nil))
     }
 
@@ -1383,33 +1382,12 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
 
         controller.renderStatusBar(makePresentation(
             mode: .noUpcoming,
-            icon: .asset(MenuStyleConstants.calendarCheckmarkIconName)
+            icon: .asset("iconCalendarCheckmark")
         ))
 
         let button = try XCTUnwrap(controller.statusItem.button)
-        XCTAssertEqual(
-            button.image?.name(),
-            MenuStyleConstants.iconNamed(
-                MenuStyleConstants.calendarCheckmarkIconName
-            ).name()
-        )
-    }
-
-    func test_renderStatusBarShowsTodaysDateIconForNoUpcomingMode() throws {
-        let controller = StatusBarItemController()
-        defer { NSStatusBar.system.removeStatusItem(controller.statusItem) }
-
-        controller.renderStatusBar(makePresentation(mode: .noUpcoming, icon: .todaysDate))
-
-        let button = try XCTUnwrap(controller.statusItem.button)
-        // NSWorkspace.shared.icon(forFile:) vends a fresh, unnamed NSImage on
-        // each call, so identity/name comparison isn't meaningful here (see
-        // MenuStyleConstants.todaysCalendarIcon) — confirm an icon was set,
-        // at the size the renderer applies to every status bar icon, and
-        // that .imageLeft is used (not .noImage, which would hide it).
-        XCTAssertNotNil(button.image)
-        XCTAssertEqual(button.image?.size, MenuStyleConstants.iconSize)
-        XCTAssertEqual(button.imagePosition, .imageLeft)
+        XCTAssertTrue(button.image?.looksLike(assetNamed: "iconCalendarCheckmark") ?? false)
+        XCTAssertFalse(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? true)
     }
 
     func test_renderStatusBarUsesFallbackForHiddenEventTitleWithoutIcon() throws {
@@ -1601,8 +1579,13 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
 
             let button = try XCTUnwrap(controller.statusItem.button)
             let expected = NSSize(width: provider.iconWidth, height: provider.iconHeight)
-            XCTAssertEqual(button.image?.size, expected)
-            XCTAssertEqual(getIconForMeetingService(service).size, expected)
+            XCTAssertEqual(getIconForMeetingService(service).size, expected, provider.id)
+            // A placeholder icon is hidden, so with no title the app icon stands in.
+            if provider.iconName == "no_online_session" {
+                XCTAssertTrue(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? false, provider.id)
+            } else {
+                XCTAssertEqual(button.image?.size, expected, provider.id)
+            }
         }
     }
 
@@ -1656,14 +1639,4 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         return event
     }
 
-    func test_todaysCalendarIconReturnsAValidNonEmptyImage() {
-        let icon = MenuStyleConstants.todaysCalendarIcon
-        // Confirms the NSWorkspace lookup (or its SF Symbol fallback) always
-        // produces something renderable, never a degenerate 0x0/1x1 image —
-        // Calendar.app should always be present on macOS, but this also
-        // covers the fallback path if it's ever missing/renamed.
-        XCTAssertGreaterThan(icon.size.width, 1)
-        XCTAssertGreaterThan(icon.size.height, 1)
-        XCTAssertFalse(icon.representations.isEmpty)
-    }
 }

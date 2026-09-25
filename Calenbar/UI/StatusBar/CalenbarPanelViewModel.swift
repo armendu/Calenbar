@@ -7,11 +7,7 @@ import Foundation
 
 // MARK: - Meeting summary presentation
 
-/// Moved here from `MeetingSummaryView.swift` so it can be produced by pure,
-/// AppKit-free logic (`meetingSummaryPresentation(for:...)` below) instead of
-/// living only inside the SwiftUI/AppKit view file. `MeetingSummaryView`
-/// still renders it — no extra import is needed there since both files
-/// compile into the same app target/module.
+/// What the current/next meeting card shows; rendered by `MeetingSummaryView`.
 struct MeetingSummaryPresentation: Equatable {
     let sectionTitle: String
     let eventTitle: String
@@ -29,14 +25,14 @@ struct MeetingSummaryPresentation: Equatable {
         guard let countdown, !countdown.isEmpty else { return sectionTitle }
         return "\(sectionTitle) • \(countdown)"
     }
+
+    var badge: CalenbarRowBadge {
+        meetingService.map(CalenbarRowBadge.service) ?? .plain
+    }
 }
 
-/// Formatted start/end time strings for one event, plus the `DateFormatter`
-/// used to produce them (reused by submenu detail rows that need additional
-/// formatting, e.g. `MenuBuilder.addEventDuration`).
-///
-/// Moved here from `MenuBuilder` (was a private type nested inside it) so it
-/// can be shared by both `MenuBuilder` and `CalenbarPanelViewModel`.
+/// An event's formatted start/end times, plus the formatter used (the menu
+/// reuses it for its duration row).
 struct EventTimePresentation {
     let formatter: DateFormatter
     let start: String
@@ -45,29 +41,13 @@ struct EventTimePresentation {
 
 // MARK: - Shadow inputs
 
-// `meetingSummaryPresentation`/`eventTimePresentation`/`CalenbarPanelViewModel.build`
-// need to compile inside the hostless `MeetingBarLogic` SPM target, so they
-// can't take the real `MBEvent`/`StatusBarMenuState`/`TimeFormat` directly:
-//   - MBEvent.calendar is MBCalendar, which stores an NSColor.
-//   - StatusBarMenuState.settings is AppSettings, which imports the external
-//     `Defaults` package (not a dependency of this target), and TimeFormat
-//     itself is `Defaults.Serializable`.
-//   - Localized strings normally come from `"...".loco()` / `I18N`, but no
-//     other pure file in this target calls those either (confirmed: none of
-//     the current `MeetingBarLogic` sources reference `.loco()` or `I18N`) —
-//     the established convention is to take already-localized strings in as
-//     data (see `StatusBarTitleLabels` in StatusBarPresentation.swift), not
-//     to look them up from policy code.
-//
-// So, mirroring `StatusBarEventPresentationInput`/`StatusBarTitleLabels` in
-// StatusBarPresentation.swift (and how `MeetingServices` itself was
-// relocated into MeetingLinkDetector.swift for the same reason), these are
-// pure, AppKit/Defaults/I18N-free mirrors of just the fields the moved
-// functions read. `CalenbarPanelViewModel+MeetingBar.swift` (app-target
-// only) adapts the real types into these.
+// This file is compiled into the AppKit-free `MeetingBarLogic` package so it
+// can be unit-tested with `swift test`. It can't see `MBEvent`, `TimeFormat`,
+// or localization (they depend on AppKit/Defaults), so these plain mirrors
+// carry just what it needs. CalenbarPanelViewModel+MeetingBar.swift converts
+// the real types into them.
 
-/// Pure mirror of the `MBEvent` fields `meetingSummaryPresentation`,
-/// `eventTimePresentation`, and `CalenbarPanelViewModel.build` read.
+/// The `MBEvent` fields the panel reads.
 struct CalenbarEventInput: Equatable {
     let id: String
     let title: String
@@ -81,39 +61,29 @@ struct CalenbarEventInput: Equatable {
     let organizerEmail: String?
 }
 
-/// Pure mirror of `TimeFormat` (Utilities/Constants.swift), which is
-/// `Defaults.Serializable` and therefore not visible inside this target.
+/// Mirror of `TimeFormat`.
 enum CalenbarTimeFormat: Equatable {
     case twelveHour
     case twentyFourHour
 }
 
-/// Pure mirror of the `StatusBarMenuState` fields `CalenbarPanelViewModel.build`
-/// reads.
+/// The `StatusBarMenuState` fields the panel reads.
 struct CalenbarPanelStateInput: Equatable {
     let nextEvent: CalenbarEventInput?
     let todayEvents: [CalenbarEventInput]
     let timeFormat: CalenbarTimeFormat
-    /// Mirrors `EventDisplaySettings.showEventMaxTimeUntilEventEnabled` /
-    /// `.showEventMaxTimeUntilEventThreshold` — the same "don't show the
-    /// event until it's within N minutes" setting the status bar text
-    /// already honors (see `StatusBarPresentationPolicy.mode`, `.afterThreshold`).
-    /// The panel reuses it rather than introducing a second, separate
-    /// "when should this show up" setting.
+    /// The status bar's "show the event only within N minutes" setting,
+    /// which the panel honours too.
     let showMaxTimeUntilEventEnabled: Bool
     let showMaxTimeUntilEventThresholdMinutes: Int
 }
 
-/// Pre-localized strings the pure panel logic needs, in place of calling
-/// `.loco()` directly. Mirrors `StatusBarTitleLabels`; populated by
-/// `CalenbarPanelLabels.current` in the `+MeetingBar.swift` adapter.
+/// Already-localized strings the panel needs (see `CalenbarPanelLabels.current`).
 struct CalenbarPanelLabels: Equatable {
     let noTitle: String
     let currentMeetingSectionTitle: String
     let nextMeetingSectionTitle: String
-    /// Format string with one `%@` placeholder for the relative countdown,
-    /// e.g. "in %@" — the raw (unsubstituted) localized value of
-    /// `status_bar_event_status_in`.
+    /// Has one `%@` for the countdown, e.g. "in %@".
     let countdownFormat: String
     let allDayStartLabel: String
     let noUpcomingMessage: String
@@ -128,17 +98,28 @@ struct CalenbarAgendaRow: Equatable, Identifiable {
     let timeRangeText: String
     let meetingService: MeetingServices?
     let isCurrent: Bool
-    /// True once the event's end time has passed. Rendered de-emphasized
-    /// (CalenbarAgendaRowView) so a finished event lower in the agenda list
-    /// doesn't read as visually equal to the still-upcoming ones above it.
+    /// Rendered dimmed so a finished event doesn't read as upcoming.
     let hasEnded: Bool
+
+    var badge: CalenbarRowBadge {
+        if isCurrent { return .live(hasMeeting: meetingService != nil) }
+        if let meetingService { return .service(meetingService) }
+        return .plain
+    }
 }
 
-/// AppKit-free snapshot of everything the glass panel's primary section
-/// needs to render: the current/next meeting summary card, plus today's
-/// agenda rows. Built from the same data that drives the existing
-/// `MenuBuilder`-based dropdown (via `CalenbarPanelStateInput`, adapted from
-/// `StatusBarMenuState`), so both stay in sync.
+/// What the circular badge at the start of a panel row shows.
+enum CalenbarRowBadge: Equatable {
+    /// The event is happening now.
+    case live(hasMeeting: Bool)
+    /// The event has a meeting link; show that service's logo.
+    case service(MeetingServices)
+    /// A plain calendar event.
+    case plain
+}
+
+/// Everything the glass panel renders: the summary card and today's agenda.
+/// Built from the same state as the classic menu, so the two always agree.
 struct CalenbarPanelViewModel: Equatable {
     var summary: MeetingSummaryPresentation?
     var agenda: [CalenbarAgendaRow]
@@ -147,7 +128,6 @@ struct CalenbarPanelViewModel: Equatable {
     static func build(
         from state: CalenbarPanelStateInput,
         now: Date,
-        isFantasticalInstalled: Bool,
         locale: Locale,
         labels: CalenbarPanelLabels
     ) -> CalenbarPanelViewModel {
@@ -159,21 +139,14 @@ struct CalenbarPanelViewModel: Equatable {
             )
         }
 
-        // Mirrors StatusBarPresentationPolicy.mode's .afterThreshold gate:
-        // when enabled, an event starting more than N minutes out isn't
-        // shown prominently — reuses the existing "show event max time
-        // until event" setting rather than adding a second, separate
-        // threshold just for this panel. A currently-running event (whose
-        // startDate is in the past) always has a negative timeUntilStart,
-        // so it's never gated out by this check.
+        // Same gate as the status bar's `.afterThreshold` mode. A running
+        // event has a negative time-until-start, so it's never held back.
         let timeUntilStart = next.startDate.timeIntervalSince(now)
         let thresholdSeconds = TimeInterval(state.showMaxTimeUntilEventThresholdMinutes * 60)
         let isBeyondThreshold = state.showMaxTimeUntilEventEnabled && timeUntilStart >= thresholdSeconds
 
         guard !isBeyondThreshold else {
-            // Not excluded from the agenda in this branch: since it isn't
-            // being shown as the summary card, listing it below is the only
-            // place it appears at all, rather than disappearing entirely.
+            // No summary card, so keep the next event in the list.
             let agenda = state.todayEvents.map { event in
                 makeAgendaRow(for: event, timeFormat: state.timeFormat, locale: locale, labels: labels, now: now)
             }
@@ -189,14 +162,10 @@ struct CalenbarPanelViewModel: Equatable {
             timeFormat: state.timeFormat,
             locale: locale,
             now: now,
-            isFantasticalInstalled: isFantasticalInstalled,
             labels: labels
         )
 
-        // Excludes `next` itself: it's already shown, prominently, as the
-        // summary card above — repeating it as the first agenda row too
-        // just duplicates the same event on screen for no reason. The
-        // agenda is "everything else today," not "everything today."
+        // The summary card already shows `next`, so don't list it twice.
         let agenda = state.todayEvents.filter { $0.id != next.id }.map { event in
             makeAgendaRow(for: event, timeFormat: state.timeFormat, locale: locale, labels: labels, now: now)
         }
@@ -222,34 +191,29 @@ struct CalenbarPanelViewModel: Equatable {
             title: event.title.isEmpty ? labels.noTitle : event.title,
             timeRangeText: event.isAllDay ? time.start : "\(time.start) – \(time.end)",
             meetingService: event.meetingService,
-            isCurrent: event.startDate <= now && event.endDate > now,
+            isCurrent: event.isRunning(at: now),
             hasEnded: event.endDate <= now
         )
     }
 }
 
-// MARK: - Moved from MenuBuilder
+// MARK: - Shared with MenuBuilder
 
-/// Moved from `MenuBuilder` (was `meetingSummaryPresentation(for:)`, an
-/// instance method reading `self.now`) so this logic is reusable outside
-/// menu construction — by `CalenbarPanelViewModel.build` above, and by
-/// `MenuBuilder.makeMeetingSummaryItem`, which now calls this free function
-/// (via the `CalenbarEventInput(event)` adapter) instead of its own
-/// (removed) method.
-///
-/// `isFantasticalInstalled` is threaded through for signature parity with
-/// `CalenbarPanelViewModel.build` (which needs it for other panel sections);
-/// the summary card itself does not use it, matching the original method's
-/// behavior exactly.
+extension CalenbarEventInput {
+    func isRunning(at now: Date) -> Bool {
+        startDate <= now && endDate > now
+    }
+}
+
+/// The meeting card's content. Used by both the glass panel and the classic menu.
 func meetingSummaryPresentation(
     for event: CalenbarEventInput,
     timeFormat: CalenbarTimeFormat,
     locale: Locale,
     now: Date,
-    isFantasticalInstalled: Bool,
     labels: CalenbarPanelLabels
 ) -> MeetingSummaryPresentation {
-    let isCurrent = event.startDate <= now && event.endDate > now
+    let isCurrent = event.isRunning(at: now)
     let eventTitle = event.title.isEmpty ? labels.noTitle : event.title
     let time = eventTimePresentation(
         for: event,
@@ -297,13 +261,6 @@ func meetingSummaryPresentation(
     )
 }
 
-/// Moved from `MenuBuilder` (was a private instance method reading
-/// `self.state.timeFormat` and `I18N.instance.locale`).
-///
-/// The plan's original sketch for this function used a `now: Date`
-/// parameter, but the actual method never read `self.now` — only
-/// `self.state.timeFormat` and the current locale — so this takes
-/// `timeFormat`/`locale` instead.
 func eventTimePresentation(
     for event: CalenbarEventInput,
     timeFormat: CalenbarTimeFormat,
@@ -335,7 +292,6 @@ func eventTimePresentation(
     )
 }
 
-/// Moved from `MenuBuilder` — only used by `meetingSummaryPresentation`.
 private func firstMeaningfulMetadataValue(_ values: [String?]) -> String? {
     values.lazy
         .compactMap { value in
@@ -344,7 +300,7 @@ private func firstMeaningfulMetadataValue(_ values: [String?]) -> String? {
         .first { !$0.isEmpty }
 }
 
-/// Moved from `MenuBuilder` — only used by `meetingSummaryPresentation`.
+/// Drops blanks and case/diacritic-insensitive duplicates, keeping order.
 private func uniqueMetadataValues(_ values: [String?]) -> [String] {
     var seen = Set<String>()
     return values.compactMap { value in

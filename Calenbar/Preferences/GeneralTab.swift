@@ -122,9 +122,6 @@ struct PatronageAppSection: View {
 
             Divider()
 
-            // App actions relocated here from the status bar menu — What's
-            // New and Rate App used to live in the classic dropdown; they're
-            // now dedicated, clearly-visible buttons in Preferences.
             HStack(spacing: 10) {
                 Button {
                     WindowCoordinator().openChangelogWindow()

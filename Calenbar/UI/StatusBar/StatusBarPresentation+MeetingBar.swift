@@ -150,10 +150,6 @@ extension StatusBarIconAssets {
     /// Asset names taken from `MenuStyleConstants` so production code stays
     /// the single source of truth.
     static var production: StatusBarIconAssets {
-        StatusBarIconAssets(
-            appIcon: MenuStyleConstants.appIconName,
-            calendarCheckmark: MenuStyleConstants.calendarCheckmarkIconName,
-            calendar: MenuStyleConstants.calendarIconName
-        )
+        StatusBarIconAssets(appIcon: MenuStyleConstants.appIconName)
     }
 }

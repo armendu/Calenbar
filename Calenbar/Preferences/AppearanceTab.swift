@@ -140,13 +140,8 @@ struct EventsSection: View {
 
 // MARK: - Status bar
 
-/// Discrete presets for "show only events starting within," mirroring
-/// Notion Calendar's own picker for the same idea, in place of a free-form
-/// minutes stepper. Backed by the same two existing Defaults keys
-/// (`showEventMaxTimeUntilEventEnabled`/`showEventMaxTimeUntilEventThreshold`)
-/// this setting has always used — no migration, no new storage, just a
-/// friendlier picker over the same values. `.always` maps to the setting
-/// being disabled entirely (event always shown regardless of distance).
+/// Presets for "show the event only within…", like Notion Calendar's picker.
+/// Stored in the existing threshold keys; `.always` turns the threshold off.
 enum ShowMeetingThresholdOption: Int, CaseIterable {
     case always = 0
     case fiveMinutes = 5
@@ -182,9 +177,7 @@ struct StatusBarSection: View {
     @Default(.showEventMaxTimeUntilEventEnabled) var showEventMaxTimeUntilEventEnabled
     @Default(.ongoingEventVisibility) var ongoingEventVisibility
 
-    /// Bridges the two underlying booleans/int Defaults keys to the single
-    /// discrete picker above — `.always` disables the setting, any other
-    /// case enables it and stores that case's minute value.
+    /// Maps the picker onto the enabled flag and minutes keys.
     private var showMeetingThresholdBinding: Binding<ShowMeetingThresholdOption> {
         Binding(
             get: {
@@ -209,7 +202,7 @@ struct StatusBarSection: View {
                 selection: $eventTitleIconFormat
             ) {
                 HStack {
-                    Image(nsImage: getImage(iconName: EventTitleIconFormat.calendar.rawValue))
+                    Image(nsImage: MenuStyleConstants.todaysDateIcon(pointSize: 16))
                         .resizable()
                         .frame(width: 16.0, height: 16.0)
                     Text("preferences_appearance_status_bar_icon_calendar_icon_value".loco())

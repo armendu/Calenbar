@@ -6,49 +6,30 @@
 import AppKit
 import SwiftUI
 
-// `MeetingSummaryPresentation` lives in `CalenbarPanelViewModel.swift` (pure,
-// AppKit-free) so it can be produced by logic that doesn't depend on AppKit
-// or SwiftUI. This file just renders it.
-
+/// The current/next meeting card. Shown in the glass panel's summary tile and
+/// as a row of the classic menu. Renders a `MeetingSummaryPresentation`.
 struct MeetingSummaryView: View {
     let presentation: MeetingSummaryPresentation
-    let providerIcon: NSImage
     var onJoin: (() -> Void)?
 
     @State private var isHovered = false
 
-    static let preferredWidth: CGFloat = 320
+    static let preferredWidth: CGFloat = 280
     static let preferredHeight: CGFloat = 66
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 11) {
+            CalenbarEventBadge(badge: presentation.badge, size: 34)
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text(presentation.sectionTitleText)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
-
-                HStack(spacing: 7) {
-                    // Only reserve space for the provider icon when the
-                    // event actually has a detected meeting service. For a
-                    // plain calendar event (no video link) the icon is the
-                    // generic "no_online_session" glyph, which renders
-                    // invisibly in dark mode but still took up 16pt + 7pt —
-                    // that pushed the title ~23pt to the right of the
-                    // section title above it and the metadata below it,
-                    // reading as a broken stair-step indent.
-                    if presentation.meetingService != nil {
-                        Image(nsImage: providerIcon)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 16, height: 16)
-                    }
-
-                    Text(presentation.eventTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                }
-
+                    .lineLimit(1)
+                Text(presentation.eventTitle)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
                 Text(presentation.metadataText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -67,39 +48,23 @@ struct MeetingSummaryView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        // A capped maxWidth, not .infinity: this view is the root view of an
-        // NSMenuItem custom view (see MenuBuilder.makeMeetingSummaryItem),
-        // and NSMenu consults NSHostingView.fittingSize to size the whole
-        // menu. An unbounded .infinity here reports back a huge "ideal"
-        // width (the same NSHostingView.fittingSize unreliability already
-        // found for the glass panel in CalenbarPanelController), stretching
-        // the entire classic menu far past its intended 320pt. Deliberately
-        // NOT a rigid minWidth+maxWidth pin, though: this view is reused
-        // inside the glass panel's summary tile (CalenbarGlassPanelView),
-        // which only has ~312pt available after its own padding — a rigid
-        // 320pt there overflows the tile's rounded shape on one side. A
-        // bare maxWidth caps the runaway-ideal-size case while still
-        // shrinking to fit whatever narrower width it's actually given.
+        .padding(.vertical, 8)
+        // NSMenu sizes itself from this row's ideal width, which for a long
+        // title is the whole title on one line. Fixing the ideal width keeps
+        // the menu narrow, while maxWidth still lets the row fill whatever
+        // width the menu or glass tile actually has.
         .frame(
-            maxWidth: Self.preferredWidth,
-            minHeight: Self.preferredHeight,
-            alignment: .leading
+            minWidth: 0, idealWidth: Self.preferredWidth, maxWidth: .infinity,
+            minHeight: Self.preferredHeight, alignment: .leading
         )
+        // Follows the corners of the tile around it (the glass panel's summary
+        // tile); in the classic menu there's no tile, so the minimum applies.
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isHovered && onJoin != nil ? Color.primary.opacity(0.15) : Color.clear)
+            ConcentricRectangle(corners: .concentric(minimum: 8))
+                .fill(isHovered && onJoin != nil ? Color.primary.opacity(0.12) : Color.clear)
         )
         .contentShape(Rectangle())
-        .onHover { hovering in
-            isHovered = hovering
-            guard onJoin != nil else { return }
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
+        .calenbarRowHover(pointingHand: onJoin != nil) { isHovered = $0 }
         .onTapGesture { onJoin?() }
     }
 }
@@ -113,7 +78,6 @@ struct MeetingSummaryView: View {
             meetingService: .zoom,
             countdown: "in 25m"
         ),
-        providerIcon: getIconForMeetingService(.zoom),
         onJoin: {}
     )
 }

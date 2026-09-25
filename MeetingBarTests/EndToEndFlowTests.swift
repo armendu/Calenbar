@@ -284,7 +284,7 @@ class EndToEndFlowTestCase: BaseTestCase {
     /// `StatusBarItemController.updateTitle()` path and returns the button it
     /// drew into — the real end of the title pipeline, minus the NSStatusItem
     /// presentation which is out of scope. Assert on `attributedTitle.string`
-    /// and `image?.name()`.
+    /// and the button image.
     fileprivate func renderTitle(_ harness: EndToEndHarness) throws -> NSStatusBarButton {
         harness.controller.updateTitle()
         return try XCTUnwrap(harness.controller.statusItem.button)
@@ -516,10 +516,7 @@ final class StatusBarEndToEndFlowTests: EndToEndFlowTestCase {
         // Idle mode (no calendars): empty title, app-icon glyph.
         let button = try renderTitle(harness)
         XCTAssertEqual(button.attributedTitle.string, "")
-        XCTAssertEqual(
-            button.image?.name(),
-            MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName).name()
-        )
+        XCTAssertTrue(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? false)
     }
 
     // MARK: Right-click entry point
@@ -822,18 +819,24 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
             $0.events.count == 2
         }
 
+        // With "today only" there's no Tomorrow section, but tomorrow's event
+        // still shows as the next one under "This week" when tomorrow falls in
+        // the current week.
+        let tomorrow = now.addingTimeInterval(tomorrowOffset)
+        let tomorrowIsThisWeek = Calendar.current.isDate(tomorrow, equalTo: now, toGranularity: .weekOfYear)
         let todayOnly = menuTitles(harness)
         XCTAssertTrue(todayOnly.contains { $0.contains("Event TODAY") })
-        XCTAssertFalse(todayOnly.contains { $0.contains("Event TMRW") })
+        XCTAssertEqual(todayOnly.contains { $0.contains("Event TMRW") }, tomorrowIsThisWeek)
         XCTAssertFalse(todayOnly.contains {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
 
         Defaults[.showEventsForPeriod] = .today_n_tomorrow
 
+        // Tomorrow gets its own section, and "This week" doesn't repeat it.
         let bothDays = menuTitles(harness)
         XCTAssertTrue(bothDays.contains { $0.contains("Event TODAY") })
-        XCTAssertTrue(bothDays.contains { $0.contains("Event TMRW") })
+        XCTAssertEqual(bothDays.filter { $0.contains("Event TMRW") }.count, 1)
         XCTAssertTrue(bothDays.contains {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
@@ -907,12 +910,10 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
             $0.identifier == MenuBuilder.meetingSummaryItemIdentifier
         })
         // …and the status bar shows the "done for today" state, not the event:
-        // empty title with today's-date glyph (the real Calendar.app icon,
-        // via NSWorkspace — not a static named asset, so its .name() isn't
-        // comparable; just confirm an icon was actually set).
+        // empty title with the drawn today's-date glyph (a template image).
         let button = try renderTitle(harness)
         XCTAssertEqual(button.attributedTitle.string, "")
-        XCTAssertNotNil(button.image)
+        XCTAssertTrue(button.image?.isTemplate ?? false)
     }
 
     func testNetworkLossKeepsCachedEventsAndShowsStaleWarning() async throws {
