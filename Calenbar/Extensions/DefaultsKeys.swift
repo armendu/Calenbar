@@ -14,13 +14,6 @@ extension Defaults.Keys {
     static let lastRevisedVersionInChangelog = Key<String>(
         "lastRevisedVersionInChangelog", default: "4.2.0")
 
-    static let isInstalledFromAppStore = Key<Bool>("isInstalledFromAppStore", default: false)
-    static let patronageDuration = Key<Int>("patronageDuration", default: 0)
-    static let processedPatronageTransactionIDs = Key<[String]>(
-        "processedPatronageTransactionIDs",
-        default: []
-    )
-
     static let selectedCalendarIDs = Key<[String]>("selectedCalendarIDs", default: [])
     static let selectedCalendarIDsByProvider = Key<[String: [String]]>(
         "selectedCalendarIDsByProvider",

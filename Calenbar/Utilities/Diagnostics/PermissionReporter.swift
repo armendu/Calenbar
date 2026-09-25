@@ -11,6 +11,17 @@ import EventKit
 import Foundation
 import UserNotifications
 
+/// Whether this copy came from the App Store, for the diagnostics report.
+enum AppSourceDetector {
+    static func isAppStoreBuild(
+        receiptURL: URL? = Bundle.main.appStoreReceiptURL,
+        fileExists: (String) -> Bool = FileManager.default.fileExists(atPath:)
+    ) -> Bool {
+        guard let receiptURL else { return false }
+        return fileExists(receiptURL.path)
+    }
+}
+
 enum PermissionReporter {
     @MainActor
     static func current(provider: EventStoreProvider) async -> PermissionSnapshot {

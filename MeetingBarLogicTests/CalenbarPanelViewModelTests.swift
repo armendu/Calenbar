@@ -220,6 +220,30 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(allDayRow?.timeRangeText, "All day")
     }
 
+    /// An all-day event spans the whole day, so it isn't shown as a meeting
+    /// happening now (live badge, bold title).
+    func testAllDayEventIsNotShownAsHappeningNow() {
+        let allDay = makeEvent(
+            id: "all-day",
+            title: "Company Holiday",
+            startDate: now.addingTimeInterval(-3600),
+            endDate: now.addingTimeInterval(86_400),
+            isAllDay: true
+        )
+        let next = makeEvent(
+            id: "next",
+            title: "Kickoff",
+            startDate: now.addingTimeInterval(600),
+            endDate: now.addingTimeInterval(1800)
+        )
+
+        let allDayRow = build(makeState(nextEvent: next, todayEvents: [allDay, next]))
+            .agenda.first { $0.id == "all-day" }
+
+        XCTAssertEqual(allDayRow?.isCurrent, false)
+        XCTAssertEqual(allDayRow?.badge, .plain)
+    }
+
     func testAgendaRowUntitledEventFallsBackToNoTitleLabel() {
         let next = makeEvent(
             id: "next",

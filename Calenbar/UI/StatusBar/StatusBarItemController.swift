@@ -58,7 +58,8 @@ enum MenuStyleConstants {
     /// menu-bar size. A template image, so it tints to the menu bar's
     /// appearance. `pointSize` is the square size; the number scales with it.
     static func todaysDateIcon(pointSize: CGFloat) -> NSImage {
-        let day = Calendar.current.component(.day, from: Date())
+        let today = Date()
+        let day = Calendar.current.component(.day, from: today)
         let size = NSSize(width: pointSize, height: pointSize)
         let image = NSImage(size: size, flipped: false) { _ in
             let body = NSRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)
@@ -103,11 +104,17 @@ enum MenuStyleConstants {
             return true
         }
         image.isTemplate = true
+        // What VoiceOver reads when the status item shows only this icon.
+        let formatter = DateFormatter()
+        formatter.locale = I18N.instance.locale
+        formatter.dateStyle = .full
+        image.accessibilityDescription = formatter.string(from: today)
         return image
     }
 
     /// A copy of `image` with `gap` points of empty space on the right, to
-    /// separate it from the title. Keeps template rendering.
+    /// separate it from the title. Keeps template rendering and the
+    /// accessibility description.
     static func iconWithTrailingGap(_ image: NSImage, gap: CGFloat) -> NSImage {
         let newSize = NSSize(width: image.size.width + gap, height: image.size.height)
         let padded = NSImage(size: newSize, flipped: false) { rect in
@@ -115,6 +122,7 @@ enum MenuStyleConstants {
             return true
         }
         padded.isTemplate = image.isTemplate
+        padded.accessibilityDescription = image.accessibilityDescription
         return padded
     }
 }
