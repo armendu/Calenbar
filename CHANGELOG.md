@@ -1,6 +1,42 @@
-# Changelog for MeetingBar
+# Changelog
 
-For next releases info look here: <https://github.com/leits/MeetingBar/releases>
+Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
+Releases up to 5.0.0 are MeetingBar's.
+
+## 5.1.0 (unreleased)
+
+The first Calenbar release.
+
+### Changed defaults
+
+These apply to anyone who hasn't changed the setting themselves, including
+people updating from MeetingBar:
+
+* The menu bar icon is now a calendar showing today's date (was no icon).
+* Event titles in the menu are shortened after 30 characters (was 50).
+* The menu bar only shows events starting within 1 hour (was always).
+
+### Panel and menu
+
+* Left-clicking the menu bar item opens a Liquid Glass panel with the current
+  or next meeting, Join, and today's agenda. "More…" opens the classic menu.
+* The menu bar title separates the event and the time with " · ".
+* Preferences › Appearance › Menu › Icon color shows the panel's event icons
+  in your macOS accent color instead of monochrome.
+* The classic menu has a "This week" section showing the next event later in
+  the week.
+* What's New moved from the menu to Preferences › General, and Rate App is
+  now "Star on GitHub" there.
+* Removed MeetingBar's Patreon, Buy Me a Coffee and contact links from
+  Preferences. "Report an Issue" opens Calenbar's GitHub issues.
+* Removed MeetingBar's in-app patronage purchases.
+* All-day events are no longer shown as a meeting happening now.
+* VoiceOver reads today's date for the menu bar's calendar icon.
+
+### Security
+
+* An event's URL field is only opened when it's a web (http/https) link.
+* Google Meet, Gather and Cal.com links are matched on their exact host.
 
 ## 5.0.0 (2026-06-19)
 

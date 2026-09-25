@@ -1,5 +1,5 @@
 import Carbon
-@testable import MeetingBar
+@testable import Calenbar
 import XCTest
 
 final class ScriptsTests: XCTestCase {

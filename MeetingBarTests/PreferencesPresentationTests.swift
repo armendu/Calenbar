@@ -5,7 +5,7 @@
 
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class PreferencesPresentationTests: XCTestCase {
     func testCalendarSourcesExplainDistinctDataSourcesAndAccountScopes() {
@@ -470,5 +470,31 @@ final class PreferencesPresentationTests: XCTestCase {
             ),
             .browser(chrome)
         )
+    }
+
+    // MARK: - ShowMeetingThresholdOption
+
+    func test_showMeetingThresholdOptionRawValuesAreUniqueAndNonNegative() {
+        let values = ShowMeetingThresholdOption.allCases.map(\.rawValue)
+        XCTAssertEqual(Set(values).count, values.count, "duplicate raw values would make the picker ambiguous")
+        XCTAssertTrue(values.allSatisfy { $0 >= 0 })
+    }
+
+    func test_showMeetingThresholdOptionAlwaysIsTheDisabledSentinel() {
+        // .always maps to the setting being off entirely (event always
+        // shown), not a real 0-minute threshold - confirm the sentinel
+        // value doesn't collide with a real preset.
+        XCTAssertEqual(ShowMeetingThresholdOption.always.rawValue, 0)
+        XCTAssertFalse(ShowMeetingThresholdOption.allCases.dropFirst().contains { $0.rawValue == 0 })
+    }
+
+    func test_showMeetingThresholdOptionLabelsAreAllNonEmpty() {
+        for option in ShowMeetingThresholdOption.allCases {
+            XCTAssertFalse(option.label.isEmpty, "\(option) has no localized label")
+            // A missing/mistyped .loco() key falls back to the raw key
+            // string itself - catch that rather than shipping a raw
+            // "calenbar_threshold_..." string in the UI.
+            XCTAssertFalse(option.label.hasPrefix("calenbar_threshold_"), "\(option)'s label looks like an unresolved localization key: \(option.label)")
+        }
     }
 }

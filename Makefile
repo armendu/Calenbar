@@ -1,18 +1,18 @@
-PROJECT := MeetingBar.xcodeproj
-SCHEME := MeetingBar
+PROJECT := Calenbar.xcodeproj
+SCHEME := Calenbar
 XCODEBUILD ?= xcodebuild
 SWIFT ?= swift
 SWIFTLINT ?= swiftlint
 BUILD_DIR ?= build
 COVERAGE_DIR := $(BUILD_DIR)/coverage
-XCODE_RESULT_BUNDLE := $(COVERAGE_DIR)/MeetingBar.xcresult
+XCODE_RESULT_BUNDLE := $(COVERAGE_DIR)/Calenbar.xcresult
 DERIVED_DATA_DIR := $(BUILD_DIR)/DerivedData
 XCODE_SOURCE_PACKAGES_DIR := $(BUILD_DIR)/SourcePackages
 HOST_ARCH := $(shell uname -m)
 DESTINATION ?= platform=macOS,arch=$(HOST_ARCH)
 XCODEBUILD_FLAGS := -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile
 LOCAL_CODESIGN_FLAGS := CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-LOGIC_COVERAGE_SOURCES := MeetingBar/Calendar MeetingBar/Meetings MeetingBar/Notifications MeetingBar/UI/StatusBar MeetingBar/Utilities/Diagnostics
+LOGIC_COVERAGE_SOURCES := Calenbar/Calendar Calenbar/Meetings Calenbar/Notifications Calenbar/UI/StatusBar Calenbar/Utilities/Diagnostics
 
 # Pipe xcodebuild through xcbeautify when available; otherwise grep for the lines that matter.
 XCFILTER := $(shell command -v xcbeautify >/dev/null 2>&1 && echo 'xcbeautify --quiet --renderer terminal' || echo "grep -E '(error:|warning:|FAIL|PASS|\\*\\* )'")
@@ -91,7 +91,7 @@ coverage-app-report:
 	fi
 	@echo ""
 	@echo "Xcode app-hosted coverage (target summary):"
-	@set -o pipefail; xcrun xccov view --report --only-targets $(XCODE_RESULT_BUNDLE) 2>/dev/null | awk 'NR <= 2 || /MeetingBar\.app/'
+	@set -o pipefail; xcrun xccov view --report --only-targets $(XCODE_RESULT_BUNDLE) 2>/dev/null | awk 'NR <= 2 || /Calenbar\.app/'
 
 lint:
 	@if command -v $(SWIFTLINT) >/dev/null 2>&1; then \

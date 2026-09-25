@@ -7,7 +7,7 @@
 //
 
 import XCTest
-@testable import MeetingBar
+@testable import Calenbar
 import SwiftUI
 
 final class TimelineLogicTests: XCTestCase {

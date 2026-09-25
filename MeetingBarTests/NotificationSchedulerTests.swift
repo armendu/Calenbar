@@ -7,7 +7,7 @@ import Defaults
 import UserNotifications
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class NotificationSchedulerTests: BaseTestCase {

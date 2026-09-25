@@ -6,11 +6,12 @@
 import Combine
 import Foundation
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class AppModelTestHarness {
     let eventsSubject = PassthroughSubject<[MBEvent], Never>()
+    let laterThisWeekEventsSubject = PassthroughSubject<[MBEvent], Never>()
     let calendarsSubject = PassthroughSubject<([MBCalendar], EventStoreProvider), Never>()
     let providerHealthSubject = PassthroughSubject<ProviderHealth, Never>()
     let selectedCalendarIDsSubject = CurrentValueSubject<[String], Never>([])
@@ -39,6 +40,7 @@ final class AppModelTestHarness {
 
     private lazy var environment = AppEnvironment(
         eventsPublisher: eventsSubject.eraseToAnyPublisher(),
+        laterThisWeekEventsPublisher: laterThisWeekEventsSubject.eraseToAnyPublisher(),
         calendarsPublisher: calendarsSubject.eraseToAnyPublisher(),
         providerHealthPublisher: providerHealthSubject.eraseToAnyPublisher(),
         selectedCalendarIDsPublisher: selectedCalendarIDsSubject.eraseToAnyPublisher(),

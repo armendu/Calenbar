@@ -8,7 +8,7 @@
 
 import Foundation
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class FakeEventStore: AuthenticatedEventStore {
     nonisolated(unsafe) var stubbedCalendars: [MBCalendar]
@@ -21,6 +21,10 @@ final class FakeEventStore: AuthenticatedEventStore {
     /// When true, `fetchEventsForDateRange` honours the requested calendars
     /// (like a real provider) instead of returning every stubbed event.
     nonisolated(unsafe) var respectsCalendarFilter = false
+    /// When true, `fetchEventsForDateRange` returns only events overlapping
+    /// the requested range, like EventKit and Google do.
+    nonisolated(unsafe) var respectsDateRange = false
+    nonisolated(unsafe) private(set) var fetchedDateRanges: [(from: Date, to: Date)] = []
     nonisolated(unsafe) private(set) var fetchCallCount = 0
     nonisolated(unsafe) private(set) var fetchedEventCalendarIDs: [[String]] = []
     nonisolated(unsafe) private(set) var refreshSourcesCallCount = 0
@@ -47,15 +51,20 @@ final class FakeEventStore: AuthenticatedEventStore {
 
     func fetchEventsForDateRange(
         for calendars: [MBCalendar],
-        from _: Date,
-        to _: Date
+        from dateFrom: Date,
+        to dateTo: Date
     ) async throws -> [MBEvent] {
         fetchedEventCalendarIDs.append(calendars.map(\.id))
+        fetchedDateRanges.append((dateFrom, dateTo))
         if let error = stubbedEventsError { throw error }
         if let error = stubbedError { throw error }
-        guard respectsCalendarFilter else { return stubbedEvents }
+        var events = stubbedEvents
+        if respectsDateRange {
+            events = events.filter { $0.startDate < dateTo && $0.endDate > dateFrom }
+        }
+        guard respectsCalendarFilter else { return events }
         let requestedIDs = Set(calendars.map(\.id))
-        return stubbedEvents.filter { requestedIDs.contains($0.calendar.id) }
+        return events.filter { requestedIDs.contains($0.calendar.id) }
     }
 
     func refreshSources() async {

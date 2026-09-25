@@ -6,7 +6,7 @@
 import AppAuthCore
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class GoogleCalendarParserTests: XCTestCase {

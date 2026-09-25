@@ -10,12 +10,17 @@
 import Defaults
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class AppSettingsTests: BaseTestCase {
     func testEmptyMatchesCleanInstallDefaults() {
         XCTAssertEqual(AppSettings.empty, AppSettings.current)
+    }
+
+    func testCleanInstallShowsOnlyEventsStartingWithinAnHour() {
+        XCTAssertTrue(AppSettings.current.events.showEventMaxTimeUntilEventEnabled)
+        XCTAssertEqual(AppSettings.current.events.showEventMaxTimeUntilEventThreshold, 60)
     }
 
     // MARK: - CalendarSettings
@@ -298,52 +303,6 @@ final class AppSettingsTests: BaseTestCase {
     func testAdvancedSettings_runJoinEventScript() {
         Defaults[.runJoinEventScript] = true
         XCTAssertTrue(AppSettings.current.advanced.runJoinEventScript)
-    }
-
-    // MARK: - App source / Patronage writes
-
-    func testAppSourceWriteHelper() {
-        AppSettings.setInstalledFromAppStore(true)
-        XCTAssertTrue(Defaults[.isInstalledFromAppStore])
-
-        AppSettings.setInstalledFromAppStore(false)
-        XCTAssertFalse(Defaults[.isInstalledFromAppStore])
-    }
-
-    func testPatronageWriteHelpers() {
-        AppSettings.addPatronageDuration(months: 3)
-        AppSettings.addPatronageDuration(months: 6, quantity: 2)
-
-        XCTAssertEqual(Defaults[.patronageDuration], 15)
-
-        AppSettings.resetPatronageDuration()
-
-        XCTAssertEqual(Defaults[.patronageDuration], 0)
-    }
-
-    func testPatronageTransactionsAreRecordedOnlyOnce() {
-        XCTAssertTrue(AppSettings.recordPatronageTransaction(
-            id: 42,
-            months: 3,
-            quantity: 2
-        ))
-        XCTAssertFalse(AppSettings.recordPatronageTransaction(
-            id: 42,
-            months: 3,
-            quantity: 2
-        ))
-
-        XCTAssertEqual(AppSettings.patronageDuration, 6)
-        XCTAssertEqual(AppSettings.processedPatronageTransactionIDs, ["42"])
-    }
-
-    func testResetPatronageClearsProcessedTransactions() {
-        AppSettings.recordPatronageTransaction(id: 42, months: 3, quantity: 1)
-
-        AppSettings.resetPatronageDuration()
-
-        XCTAssertEqual(AppSettings.patronageDuration, 0)
-        XCTAssertTrue(AppSettings.processedPatronageTransactionIDs.isEmpty)
     }
 
     // MARK: - currentForScheduler integration

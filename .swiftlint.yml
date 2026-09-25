@@ -2,7 +2,7 @@ reporter: "github-actions-logging"
 
 included:
   - Package.swift
-  - MeetingBar
+  - Calenbar
   - MeetingBarLogicTests
   - MeetingBarTests
 

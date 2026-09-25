@@ -5,7 +5,7 @@
 
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 final class GetGmailAccountTests: XCTestCase {
     func testExtractsEmailFromMailtoQuotes() {

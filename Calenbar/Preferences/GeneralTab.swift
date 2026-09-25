@@ -1,0 +1,155 @@
+//
+//  GeneralTab.swift
+//  MeetingBar
+//
+//  Created by Andrii Leitsius on 13.01.2021.
+//  Copyright © 2021 Andrii Leitsius. All rights reserved.
+//
+
+import SwiftUI
+
+import Defaults
+import KeyboardShortcuts
+
+struct GeneralTab: View {
+    @Default(.timeFormat) var timeFormat
+
+    var body: some View {
+        PreferencesGroupedForm {
+            Section {
+                AboutSection()
+            }
+
+            Section(header: Text("preferences_section_general_settings_title".loco())) {
+                LaunchAtLoginANDPreferredLanguagePicker()
+
+                // 12/24-hour format affects every surface that renders clock
+                // times (dropdown rows, timeline, event details, fullscreen
+                // notification), so it lives with the app-wide options rather
+                // than under Menu.
+                Picker(
+                    preferenceLabel("preferences_appearance_menu_time_format_title"),
+                    selection: $timeFormat
+                ) {
+                    Text("preferences_appearance_menu_time_format_12_hour_value".loco())
+                        .tag(TimeFormat.am_pm)
+                    Text("preferences_appearance_menu_time_format_24_hour_value".loco())
+                        .tag(TimeFormat.military)
+                }
+            }
+
+            Section(header: Text("preferences_section_shortcuts_title".loco())) {
+                ShortcutsSection()
+            }
+        }
+    }
+}
+
+struct ShortcutsSection: View {
+    var body: some View {
+        ShortcutRow(
+            title: "preferences_general_shortcut_open_menu".loco(),
+            recorder: KeyboardShortcuts.Recorder(for: .openMenuShortcut)
+        )
+        ShortcutRow(
+            title: "preferences_general_shortcut_join_next".loco(),
+            recorder: KeyboardShortcuts.Recorder(for: .joinEventShortcut)
+        )
+        ShortcutRow(
+            title: "preferences_general_shortcut_create_meeting".loco(),
+            recorder: KeyboardShortcuts.Recorder(for: .createMeetingShortcut)
+        )
+        ShortcutRow(
+            title: "preferences_general_shortcut_join_from_clipboard".loco(),
+            recorder: KeyboardShortcuts.Recorder(for: .openClipboardShortcut)
+        )
+        ShortcutRow(
+            title: "preferences_general_shortcut_toggle_meeting_name_visibility".loco(),
+            recorder: KeyboardShortcuts.Recorder(for: .toggleMeetingTitleVisibilityShortcut)
+        )
+    }
+}
+
+private struct ShortcutRow<Recorder: View>: View {
+    let title: String
+    let recorder: Recorder
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            recorder
+        }
+    }
+}
+
+struct AboutSection: View {
+    @EnvironmentObject var appModel: AppModel
+
+    var body: some View {
+        // The whole About card is one Form row (a single VStack) so the
+        // grouped form doesn't insert its own separators between the identity
+        // and link clusters — we draw the one divider we want.
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                Image("appIconForAbout")
+                    .resizable()
+                    .frame(width: 72, height: 72)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("Calenbar")
+                            .font(.title2).bold()
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("preferences_general_meeting_bar_description".loco())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+
+            Divider()
+
+            HStack(spacing: 10) {
+                Button {
+                    WindowCoordinator().openChangelogWindow()
+                } label: {
+                    Label("status_bar_whats_new".loco(), systemImage: "sparkles")
+                }
+                // Calenbar isn't on the App Store, so rating it means starring the repo.
+                Button {
+                    Links.calenbarGitHub.openInDefaultBrowser()
+                } label: {
+                    Label("preferences_general_star_on_github".loco(), systemImage: "star")
+                }
+                Spacer()
+            }
+            .buttonStyle(.bordered)
+
+            // Secondary links + diagnostics, visually quieter.
+            HStack(spacing: 16) {
+                Button("preferences_general_report_issue".loco()) {
+                    Links.calenbarIssues.openInDefaultBrowser()
+                }
+                .buttonStyle(.link)
+                Spacer()
+                Button("preferences_status_copy_diagnostics".loco()) {
+                    DiagnosticsClipboard.copy(
+                        snapshot: DiagnosticsSnapshot(appState: appModel.state)
+                    )
+                }
+                .controlSize(.small)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+#Preview() {
+    GeneralTab()
+        .padding()
+        .frame(width: 700, height: 620)
+}

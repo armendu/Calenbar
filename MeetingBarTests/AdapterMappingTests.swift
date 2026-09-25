@@ -18,7 +18,7 @@
 import Defaults
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 // MARK: - EventFilterSettings adapter
 

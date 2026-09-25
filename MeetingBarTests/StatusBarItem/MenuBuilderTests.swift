@@ -11,7 +11,7 @@ import Defaults
 import SwiftUI
 import XCTest
 
-@testable import MeetingBar
+@testable import Calenbar
 
 @MainActor
 final class MenuBuilderTests: BaseTestCase {
@@ -352,8 +352,13 @@ final class MenuBuilderTests: BaseTestCase {
         state.nextEvent = event
         state.settings = .empty
 
-        let presentation = MenuBuilder(target: Dummy(), state: state, now: now)
-            .meetingSummaryPresentation(for: event)
+        let presentation = meetingSummaryPresentation(
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
+            now: now,
+            labels: .current
+        )
 
         XCTAssertEqual(
             presentation.metadata.filter { $0 == duplicateValue }.count,
@@ -378,8 +383,13 @@ final class MenuBuilderTests: BaseTestCase {
         state.settings = .empty
         state.settings.statusBar.eventTitleFormat = .generic
 
-        let presentation = MenuBuilder(target: Dummy(), state: state, now: now)
-            .meetingSummaryPresentation(for: event)
+        let presentation = meetingSummaryPresentation(
+            for: CalenbarEventInput(event),
+            timeFormat: CalenbarTimeFormat(state.timeFormat),
+            locale: I18N.instance.locale,
+            now: now,
+            labels: .current
+        )
 
         XCTAssertEqual(presentation.eventTitle, event.title)
     }
@@ -609,75 +619,17 @@ final class MenuBuilderTests: BaseTestCase {
 
     func test_preferencesSectionContainsExpectedItems() {
         // --- Arrange -----------------------------------------------------------------
-        // Force "What's New" to appear
-        Defaults[.appVersion] = "5.0.0"
-        Defaults[.lastRevisedVersionInChangelog] = "4.2.0"
-        Defaults[.isInstalledFromAppStore] = true
-
-        // Force "Rate App" to appear (installation > 14 days ago)
-        let distantPast = Calendar.current.date(byAdding: .day, value: -30, to: Date())!
-        // State must reflect the Defaults overrides above — MenuBuilder no
-        // longer reads Defaults directly.
         let state = StatusBarMenuState.make(from: [])
-        let builder = MenuBuilder(
-            target: Dummy(), state: state, installationDate: distantPast)
+        let builder = MenuBuilder(target: Dummy(), state: state)
 
         // --- Act ---------------------------------------------------------------------
         let items = builder.buildPreferencesSection()
-        let titles = MenuBuilder.plainTitles(of: items)
 
         // --- Assert ------------------------------------------------------------------
-        XCTAssertTrue(
-            titles.contains(where: { $0.contains("status_bar_whats_new".loco()) }),
-            "Should show “What's New” when appVersion > changelogVersion")
-
-        XCTAssertTrue(
-            titles.contains(where: { $0.contains("status_bar_rate_app".loco()) }),
-            "Should show “Rate App” button after two weeks")
-
         XCTAssertEqual(
             items.last?.action,
             #selector(StatusBarItemController.quitAction),
             "Last item must be Quit")
-    }
-
-    func testPreferencesSectionShowsRateAppAfterDelayOutsideAppStore() {
-        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let distantPast = Calendar.current.date(byAdding: .day, value: -30, to: now)!
-        var state = StatusBarMenuState.make(from: [])
-        state.isInstalledFromAppStore = false
-        let builder = MenuBuilder(
-            target: Dummy(),
-            state: state,
-            installationDate: distantPast,
-            now: now
-        )
-
-        let titles = MenuBuilder.plainTitles(of: builder.buildPreferencesSection())
-
-        XCTAssertTrue(
-            titles.contains(where: { $0.contains("status_bar_rate_app".loco()) }),
-            "Rate App should remain visible after the delay outside App Store builds"
-        )
-    }
-
-    func testPreferencesSectionHidesRateAppBeforeInstallationDelay() {
-        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let recentInstallation = Calendar.current.date(byAdding: .day, value: -7, to: now)!
-        var state = StatusBarMenuState.make(from: [])
-        state.isInstalledFromAppStore = true
-        let builder = MenuBuilder(
-            target: Dummy(),
-            state: state,
-            installationDate: recentInstallation,
-            now: now
-        )
-
-        let titles = MenuBuilder.plainTitles(of: builder.buildPreferencesSection())
-
-        XCTAssertFalse(titles.contains {
-            $0.contains("status_bar_rate_app".loco())
-        })
     }
 
     func test_bookmarksInlineWhenCountIsThreeOrLess() {
@@ -1352,8 +1304,9 @@ final class StatusBarTitleRendererTests: BaseTestCase {
                 at: title.length - 1,
                 effectiveRange: nil
             ) as? NSFont
-        XCTAssertEqual(titleFont?.pointSize ?? 0, 12, accuracy: 0.001)
-        XCTAssertEqual(timeFont?.pointSize ?? 0, 9, accuracy: 0.001)
+        XCTAssertEqual(titleFont?.pointSize ?? 0, MenuStyleConstants.stackedTitleFontSize, accuracy: 0.001)
+        XCTAssertEqual(timeFont?.pointSize ?? 0, MenuStyleConstants.stackedTimeFontSize, accuracy: 0.001)
+        XCTAssertLessThan(MenuStyleConstants.stackedTimeFontSize, MenuStyleConstants.stackedTitleFontSize)
     }
 
     func test_inlineTitleIncludesTimeAndUnderlineStyle() {
@@ -1364,7 +1317,7 @@ final class StatusBarTitleRendererTests: BaseTestCase {
             )
         )
 
-        XCTAssertEqual(title.string, "Weekly sync now")
+        XCTAssertEqual(title.string, "Weekly sync · now")
         XCTAssertNotNil(title.attribute(.underlineStyle, at: 0, effectiveRange: nil))
     }
 
@@ -1429,16 +1382,12 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
 
         controller.renderStatusBar(makePresentation(
             mode: .noUpcoming,
-            icon: .asset(MenuStyleConstants.calendarCheckmarkIconName)
+            icon: .asset("iconCalendarCheckmark")
         ))
 
         let button = try XCTUnwrap(controller.statusItem.button)
-        XCTAssertEqual(
-            button.image?.name(),
-            MenuStyleConstants.iconNamed(
-                MenuStyleConstants.calendarCheckmarkIconName
-            ).name()
-        )
+        XCTAssertTrue(button.image?.looksLike(assetNamed: "iconCalendarCheckmark") ?? false)
+        XCTAssertFalse(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? true)
     }
 
     func test_renderStatusBarUsesFallbackForHiddenEventTitleWithoutIcon() throws {
@@ -1594,21 +1543,17 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         let controller = StatusBarItemController()
         defer { NSStatusBar.system.removeStatusItem(controller.statusItem) }
         var didOpenPreferences = false
-        var didOpenChangelog = false
         var didQuit = false
 
         controller.configure(dependencies: StatusBarDependencies(
             openPreferences: { didOpenPreferences = true },
-            openChangelog: { didOpenChangelog = true },
             quit: { didQuit = true }
         ))
 
         controller.openPreferencesAction()
-        controller.openChangelogAction()
         controller.quitAction()
 
         XCTAssertTrue(didOpenPreferences)
-        XCTAssertTrue(didOpenChangelog)
         XCTAssertTrue(didQuit)
     }
 
@@ -1634,8 +1579,13 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
 
             let button = try XCTUnwrap(controller.statusItem.button)
             let expected = NSSize(width: provider.iconWidth, height: provider.iconHeight)
-            XCTAssertEqual(button.image?.size, expected)
-            XCTAssertEqual(getIconForMeetingService(service).size, expected)
+            XCTAssertEqual(getIconForMeetingService(service).size, expected, provider.id)
+            // A placeholder icon is hidden, so with no title the app icon stands in.
+            if provider.iconName == "no_online_session" {
+                XCTAssertTrue(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? false, provider.id)
+            } else {
+                XCTAssertEqual(button.image?.size, expected, provider.id)
+            }
         }
     }
 
@@ -1688,4 +1638,5 @@ final class StatusBarItemControllerPresentationTests: BaseTestCase {
         event.participationStatus = participationStatus
         return event
     }
+
 }

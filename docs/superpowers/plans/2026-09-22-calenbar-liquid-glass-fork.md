@@ -395,6 +395,8 @@ git commit -m "Fix status-bar leading-space bug; default to icon + compact count
 
 ### Task 7: Build the Liquid Glass panel views
 
+> **Status: implemented ahead of schedule**, as prep work while blocked on the Xcode install (branch `calenbar-glass-panel`, commits `155d276`→`9306546`). Verified compile-clean via ad-hoc `swiftc`/throwaway-SPM probes against the real macOS 26 SDK and real dependencies (no XCTest/`xcodebuild` available in this environment) — **not yet click-tested on a real device.** The actual implementation matches this task's intent but diverged from its literal code sketch in ways worth knowing before re-reading it: `MeetingSummaryView` is reused as-is inside the panel rather than rebuilt, a "More…" row was added (see Task 8's note below for why), and all new user-facing strings go through `.loco()`/`Localizable.strings` rather than being hardcoded. See the updated spec's "Panel mechanics" section and the commit messages on that branch for the full story, including two real bugs a review pass caught and fixed (a left-click double-fire, a dead Esc handler) and one still-open risk (Esc's Input Monitoring dependency).
+
 **Files:**
 - Create: `Calenbar/UI/StatusBar/CalenbarGlassPanelView.swift`
 - Create: `Calenbar/UI/StatusBar/CalenbarAgendaRowView.swift`
@@ -459,6 +461,8 @@ git commit -m "Add Liquid Glass panel SwiftUI views"
 ---
 
 ### Task 8: Custom `NSPanel` host and status-item wiring
+
+> **Status: implemented ahead of schedule**, alongside Task 7 (same branch/commits). **Important correction to this task's own file description below**: "right-click → existing `NSMenu` unchanged" is wrong — right-click was never a menu trigger to begin with, it's `joinNextMeeting()`, an existing instant-join shortcut (confirmed by reading the actual pre-existing `StatusBarItemController.statusMenuBarAction`). That shortcut is what's left unchanged; the classic `NSMenu` is reached via a new "More…" row inside the glass panel instead. Also implemented beyond this task's original sketch: an `NSHostingView` subclass overriding `acceptsFirstMouse(for:)` (without it, every click in the panel would need two taps — a well-known gotcha for permanently-non-key custom popups), and a fix for the status item button double-firing its action per left-click (harmless under the old blocking `NSMenu` path, but caused an open-then-immediate-close under the new non-blocking panel). See the spec's "Panel mechanics" section for the full list of what changed and why.
 
 **Files:**
 - Create: `Calenbar/UI/StatusBar/CalenbarPanelController.swift`
