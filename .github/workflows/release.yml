@@ -1,0 +1,92 @@
+name: Release
+
+# A merge to master with an app version that has no release yet tags the
+# commit v<version>, builds Calenbar-<version>.dmg and publishes it as a
+# GitHub release, with that version's CHANGELOG.md section as the notes.
+# To release, bump MARKETING_VERSION and add a CHANGELOG.md section.
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  release:
+    name: Build DMG and publish
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Check for an unreleased version
+        id: version
+        run: |
+          version=$(sed -nE 's/.*MARKETING_VERSION = ([^;]+);.*/\1/p' Calenbar.xcodeproj/project.pbxproj | sort -u)
+          if [ "$(echo "$version" | wc -l)" -ne 1 ] || [ -z "$version" ]; then
+            echo "Expected one MARKETING_VERSION, found: $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "v$version is already released; nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Releasing v$version."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode
+        if: steps.version.outputs.release == 'true'
+        run: sudo xcode-select -s "$DEVELOPER_DIR" && xcodebuild -version
+
+      - name: Build DMG
+        if: steps.version.outputs.release == 'true'
+        run: make dmg
+
+      - name: Extract release notes
+        if: steps.version.outputs.release == 'true'
+        run: |
+          # The CHANGELOG.md section for this version, without its heading.
+          awk -v v="$VERSION" '
+            index($0, "## " v) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > build/release-notes.md
+          if ! grep -q '[^[:space:]]' build/release-notes.md; then
+            echo "CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+          cat >> build/release-notes.md <<'EOF'
+
+          ---
+
+          Calenbar isn't signed with an Apple Developer ID. After dragging it to Applications, open it once, then allow it in System Settings › Privacy & Security › Open Anyway.
+          EOF
+
+      - name: Tag and publish release
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" "build/Calenbar-$VERSION.dmg" \
+            --target "$GITHUB_SHA" \
+            --title "Calenbar $VERSION" \
+            --notes-file build/release-notes.md
