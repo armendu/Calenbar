@@ -41,6 +41,9 @@ struct AppState: Equatable {
 
     var calendars: [MBCalendar] = []
     var events: [MBEvent] = []
+    /// Events after the display period until the week ends. Only the menu's
+    /// "This week" section reads them.
+    var laterThisWeekEvents: [MBEvent] = []
     var selectedCalendarIDs: [String] = []
     var activeProvider: EventStoreProvider = .macOSEventKit
     var providerChangeInProgress = false
@@ -96,6 +99,7 @@ enum AppAction {
     case refreshCalendars
     case calendarsLoaded([MBCalendar], provider: EventStoreProvider)
     case eventsLoaded([MBEvent])
+    case laterThisWeekEventsLoaded([MBEvent])
     case selectedCalendarsChanged([String])
     case providerHealthChanged(ProviderHealth)
     case calendarRefreshFailed(Error)
@@ -138,6 +142,9 @@ enum AppAction {
 struct AppEnvironment {
     /// Live stream of the current event list from the active provider.
     var eventsPublisher: AnyPublisher<[MBEvent], Never>
+
+    /// Events after the display period until the week ends.
+    var laterThisWeekEventsPublisher: AnyPublisher<[MBEvent], Never> = Just([]).eraseToAnyPublisher()
 
     /// Live stream of calendars paired with the active provider name.
     var calendarsPublisher: AnyPublisher<([MBCalendar], EventStoreProvider), Never>
@@ -208,6 +215,7 @@ struct AppEnvironment {
     ) -> AppEnvironment {
         AppEnvironment(
             eventsPublisher: calendarSync.$events.eraseToAnyPublisher(),
+            laterThisWeekEventsPublisher: calendarSync.$laterThisWeekEvents.eraseToAnyPublisher(),
             calendarsPublisher: calendarSync.$calendars
                 .map { calendars in
                     (calendars, calendarSync.repository.activeProviderName)
@@ -304,6 +312,13 @@ final class AppModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+        environment.laterThisWeekEventsPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] events in
+                self?.send(.laterThisWeekEventsLoaded(events))
+            }
+            .store(in: &cancellables)
+
         environment.calendarsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] (calendars, provider) in
@@ -334,7 +349,7 @@ final class AppModel: ObservableObject {
              .didWake, .systemClockChanged, .timezoneChanged, .dayChanged:
             handleLifecycleAction(action)
         case .calendarStoreChanged, .refreshCalendars, .calendarsLoaded,
-             .eventsLoaded, .selectedCalendarsChanged, .providerHealthChanged,
+             .eventsLoaded, .laterThisWeekEventsLoaded, .selectedCalendarsChanged, .providerHealthChanged,
              .calendarRefreshFailed, .providerChanged,
              .selectCalendar, .changeProvider, .settingsChanged,
              .toggleMeetingTitleVisibility:
@@ -444,6 +459,8 @@ final class AppModel: ObservableObject {
         case .eventsLoaded(let events):
             state.events = events
             send(.reconcileNotifications)
+        case .laterThisWeekEventsLoaded(let events):
+            state.laterThisWeekEvents = events
         case .selectedCalendarsChanged(let selectedCalendarIDs):
             state.selectedCalendarIDs = selectedCalendarIDs
         case .providerHealthChanged(let health):
@@ -553,6 +570,7 @@ final class AppModel: ObservableObject {
         state.activeProvider = provider
         state.calendars = []
         state.events = []
+        state.laterThisWeekEvents = []
     }
 
     private func beginProviderChange() -> Int {
@@ -574,6 +592,7 @@ final class AppModel: ObservableObject {
             state.activeProvider = provider
             state.calendars = snapshotProvider == provider ? calendars : []
             state.events = []
+            state.laterThisWeekEvents = []
         }
         state.providerChangeInProgress = false
         return result

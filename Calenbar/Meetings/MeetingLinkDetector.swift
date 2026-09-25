@@ -683,7 +683,9 @@ enum MeetingOpeningPolicy {
             return .openMeetingLink(meetingLink, runJoinScript: runJoinEventScript)
         }
 
-        if let eventURL = event.eventURL {
+        // Only web links: the event's URL field comes from whoever sent the
+        // invite, and other schemes hand off to arbitrary apps (ssh, smb, …).
+        if let eventURL = event.eventURL, ["http", "https"].contains(eventURL.scheme?.lowercased()) {
             return .openEventURL(eventURL)
         }
 

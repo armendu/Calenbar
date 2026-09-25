@@ -18,6 +18,11 @@ final class AppSettingsTests: BaseTestCase {
         XCTAssertEqual(AppSettings.empty, AppSettings.current)
     }
 
+    func testCleanInstallShowsOnlyEventsStartingWithinAnHour() {
+        XCTAssertTrue(AppSettings.current.events.showEventMaxTimeUntilEventEnabled)
+        XCTAssertEqual(AppSettings.current.events.showEventMaxTimeUntilEventThreshold, 60)
+    }
+
     // MARK: - CalendarSettings
 
     func testCalendarSettings_selectedCalendarIDs() {

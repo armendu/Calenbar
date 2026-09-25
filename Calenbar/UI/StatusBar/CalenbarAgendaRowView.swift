@@ -6,11 +6,8 @@
 import AppKit
 import SwiftUI
 
-/// One row of the glass panel's "today" agenda list. Deliberately plain
-/// (non-glass) content — it sits inside the panel's agenda glass tile (see
-/// `CalenbarGlassPanelView.agendaTile`), and per Apple's Liquid Glass
-/// guidance, individual rows inside a glass tile shouldn't carry their own
-/// separate glass effect ("glass cannot sample other glass").
+/// One row of the panel's "today" agenda. Plain content rather than glass:
+/// it sits inside the agenda's glass tile, and glass shouldn't stack on glass.
 struct CalenbarAgendaRowView: View {
     let row: CalenbarAgendaRow
     var onSelect: (() -> Void)?
@@ -18,19 +15,8 @@ struct CalenbarAgendaRowView: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            // A small live dot reads faster than the icon/weight change alone
-            // for "this is happening right now" — same visual language as
-            // the running-meeting indicator system Calendar widgets use.
-            Circle()
-                .fill(row.isCurrent ? Color.accentColor : Color.clear)
-                .frame(width: 5, height: 5)
-
-            Image(nsImage: getIconForMeetingService(row.meetingService))
-                .resizable()
-                .scaledToFit()
-                .frame(width: 14, height: 14)
-                .opacity(row.isCurrent ? 1 : 0.7)
+        HStack(spacing: 10) {
+            CalenbarEventBadge(badge: row.badge)
 
             Text(row.title)
                 .font(.subheadline.weight(row.isCurrent ? .semibold : .regular))
@@ -44,32 +30,18 @@ struct CalenbarAgendaRowView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        // Horizontal inset matches MeetingSummaryView's effective left edge
-        // in the summary tile above (its own 12pt padding + the 4pt this
-        // panel adds around it, see CalenbarGlassPanelView.summaryTile) —
-        // otherwise agenda row text starts at a different x-position than
-        // the summary card's text right above it.
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .opacity(row.hasEnded ? 0.45 : 1)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isHovered ? Color.primary.opacity(0.1) : Color.clear)
-        )
+        .calenbarRowBubble(hovered: isHovered)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(row.title), \(row.timeRangeText)")
         .accessibilityHint(onSelect != nil ? "calenbar_panel_agenda_row_accessibility_hint".loco() : "")
-        .onHover { hovering in
-            isHovered = hovering
-            guard onSelect != nil else { return }
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
+        .calenbarRowHover(pointingHand: onSelect != nil) { isHovered = $0 }
         .onTapGesture { onSelect?() }
+        .calenbarAccessibilityButton(onSelect)
     }
 }
 
@@ -81,7 +53,8 @@ struct CalenbarAgendaRowView: View {
                 title: "Stand Up",
                 timeRangeText: "10:00 – 10:15",
                 meetingService: .zoom,
-                isCurrent: true
+                isCurrent: true,
+                hasEnded: false
             )
         )
         CalenbarAgendaRowView(
@@ -90,7 +63,18 @@ struct CalenbarAgendaRowView: View {
                 title: "1:1 with manager",
                 timeRangeText: "11:00 – 11:30",
                 meetingService: .meet,
-                isCurrent: false
+                isCurrent: false,
+                hasEnded: false
+            )
+        )
+        CalenbarAgendaRowView(
+            row: CalenbarAgendaRow(
+                id: "3",
+                title: "Morning sync (finished)",
+                timeRangeText: "08:00 – 08:15",
+                meetingService: nil,
+                isCurrent: false,
+                hasEnded: true
             )
         )
     }

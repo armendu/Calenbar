@@ -12,16 +12,35 @@ import Foundation
 
 // MARK: - Date range helpers
 
-func calendarDateRange(for period: ShowEventsForPeriod) -> (from: Date, to: Date) {
-    let dateFrom = Calendar.current.startOfDay(for: Date())
+func calendarDateRange(
+    for period: ShowEventsForPeriod,
+    now: Date = Date(),
+    calendar: Calendar = .current
+) -> (from: Date, to: Date) {
+    let dateFrom = calendar.startOfDay(for: now)
     let dateTo: Date
     switch period {
     case .today:
-        dateTo = Calendar.current.date(byAdding: .day, value: 1, to: dateFrom)!
+        dateTo = calendar.date(byAdding: .day, value: 1, to: dateFrom)!
     case .today_n_tomorrow:
-        dateTo = Calendar.current.date(byAdding: .day, value: 2, to: dateFrom)!
+        dateTo = calendar.date(byAdding: .day, value: 2, to: dateFrom)!
     }
     return (dateFrom, dateTo)
+}
+
+/// The display period, extended to the end of the week for the menu's
+/// "This week" section. Events starting at or after `periodEnd` are only
+/// shown there.
+func calendarFetchRange(
+    for period: ShowEventsForPeriod,
+    now: Date = Date(),
+    calendar: Calendar = .current
+) -> (from: Date, periodEnd: Date, to: Date) {
+    let (from, periodEnd) = calendarDateRange(for: period, now: now, calendar: calendar)
+    let weekEnd = EventSelection.thisWeekRange(
+        now: now, calendar: calendar, skippingTomorrow: period == .today_n_tomorrow
+    )?.upperBound
+    return (from, periodEnd, max(periodEnd, weekEnd ?? periodEnd))
 }
 
 enum CalendarRepositoryError: LocalizedError {
@@ -129,19 +148,19 @@ public final class CalendarRepository {
         try await activeProvider.fetchEventsForDateRange(for: calendars, from: dateFrom, to: dateTo)
     }
 
-    /// Fetches events for the currently configured display period and selected calendars.
-    ///
-    /// This is a convenience that consolidates date-range calculation and selected-calendar
-    /// filtering so `CalendarSync` does not need to know about either detail.
+    /// Fetches the selected calendars' events for the display period and the
+    /// rest of the week (see `calendarFetchRange`), so `CalendarSync` doesn't
+    /// need to know about either.
     public func fetchCurrentPeriodEvents(fromAllCalendars allCalendars: [MBCalendar]) async throws
-        -> [MBEvent] {
+        -> (events: [MBEvent], periodEnd: Date) {
         let selectedCalendarIDs = AppSettings.selectedCalendarIDs(for: activeProviderName)
         let selectedCalendars = allCalendars.filter {
             selectedCalendarIDs.contains($0.id)
         }
-        let (dateFrom, dateTo) = calendarDateRange(for: Defaults[.showEventsForPeriod])
-        return try await activeProvider.fetchEventsForDateRange(
-            for: selectedCalendars, from: dateFrom, to: dateTo)
+        let range = calendarFetchRange(for: Defaults[.showEventsForPeriod])
+        let events = try await activeProvider.fetchEventsForDateRange(
+            for: selectedCalendars, from: range.from, to: range.to)
+        return (events, range.periodEnd)
     }
 
     public func refreshSources() async {

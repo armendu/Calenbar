@@ -258,6 +258,18 @@ struct StatusBarTitleText: Equatable {
 }
 
 enum StatusBarTitlePolicy {
+    /// The title shown for the "dot" title format.
+    static let dotTitle = "•"
+
+    /// The one-line status bar text: "Standup · in 5m".
+    static func inlineText(title: String, time: String) -> String {
+        if time.isEmpty { return title }
+        if title.isEmpty { return time }
+        // The dot format's title is already a separator.
+        let separator = title == dotTitle ? " " : " · "
+        return title + separator + time
+    }
+
     // swiftlint:disable:next function_parameter_count
     static func text(
         eventTitle rawTitle: String?,
@@ -299,7 +311,7 @@ enum StatusBarTitlePolicy {
         case .generic:
             return settings.labels.genericMeetingTitle
         case .dot:
-            return "•"
+            return dotTitle
         case .none:
             return ""
         }
@@ -333,9 +345,8 @@ enum StatusBarIconFormat: Equatable {
 enum StatusBarIcon: Equatable {
     case asset(String)
     case meetingService(MeetingServices?)
-    /// The real Calendar.app icon, which macOS renders with today's actual
-    /// date on it — the renderer resolves this via
-    /// `MenuStyleConstants.todaysCalendarIcon`, not a static named asset.
+    /// A calendar glyph showing today's date, drawn at render time
+    /// (`MenuStyleConstants.todaysDateIcon`).
     case todaysDate
     case none
 }
@@ -344,8 +355,6 @@ enum StatusBarIcon: Equatable {
 /// fully decoupled from `MenuStyleConstants` and easy to test.
 struct StatusBarIconAssets: Equatable {
     let appIcon: String
-    let calendarCheckmark: String
-    let calendar: String
 }
 
 /// Picks the status bar icon based on the current title mode, the user's
@@ -360,10 +369,11 @@ struct StatusBarIconAssets: Equatable {
 /// | noUpcoming       | appicon                     | app icon            |
 /// | noUpcoming       | calendar / eventtype / none | today's date        |
 /// | afterThreshold   | appicon                     | app icon            |
-/// | afterThreshold   | calendar / eventtype / none | calendar            |
+/// | afterThreshold   | calendar / eventtype / none | today's date        |
 /// | nextEvent        | none                        | no icon             |
 /// | nextEvent        | eventtype                   | meetingService(...) |
-/// | nextEvent        | appicon / calendar          | named asset         |
+/// | nextEvent        | calendar                    | today's date        |
+/// | nextEvent        | appicon                     | named asset         |
 enum StatusBarIconPolicy {
     static func icon(
         mode: StatusBarTitleMode,
@@ -375,21 +385,19 @@ enum StatusBarIconPolicy {
         switch mode {
         case .idle:
             return .asset(assets.appIcon)
-        case .noUpcoming:
+        case .noUpcoming, .afterThreshold:
             return format == .appicon
                 ? .asset(assets.appIcon)
                 : .todaysDate
-        case .afterThreshold:
-            return format == .appicon
-                ? .asset(assets.appIcon)
-                : .asset(assets.calendar)
         case .nextEvent:
             switch format {
             case .none:
                 return .none
             case .eventtype:
                 return .meetingService(meetingService)
-            case .appicon, .calendar:
+            case .calendar:
+                return .todaysDate
+            case .appicon:
                 return .asset(formatAssetName)
             }
         }

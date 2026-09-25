@@ -136,3 +136,34 @@ enum EventSelection {
         return result
     }
 }
+
+extension EventSelection {
+    /// From the end of the menu's day sections (after today, or after
+    /// tomorrow when tomorrow has its own section) to the end of the current
+    /// week, or nil when no day of the week is left. The week follows
+    /// `calendar`'s first weekday.
+    static func thisWeekRange(now: Date, calendar: Calendar, skippingTomorrow: Bool) -> Range<Date>? {
+        let today = calendar.startOfDay(for: now)
+        guard let start = calendar.date(byAdding: .day, value: skippingTomorrow ? 2 : 1, to: today),
+              let end = calendar.dateInterval(of: .weekOfYear, for: now)?.end,
+              start < end
+        else { return nil }
+        return start..<end
+    }
+
+    /// Events starting within `thisWeekRange`, soonest first.
+    static func thisWeekEvents<Event>(
+        _ events: [Event],
+        startDate: (Event) -> Date,
+        now: Date,
+        calendar: Calendar,
+        skippingTomorrow: Bool
+    ) -> [Event] {
+        guard let range = thisWeekRange(now: now, calendar: calendar, skippingTomorrow: skippingTomorrow)
+        else { return [] }
+
+        return events
+            .filter { range.contains(startDate($0)) }
+            .sorted { startDate($0) < startDate($1) }
+    }
+}

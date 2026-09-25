@@ -27,7 +27,6 @@ struct MenuBuilder {
     /// state-driven branches; production callers must pass a real snapshot.
     var state: StatusBarMenuState = StatusBarMenuState()
     var isFantasticalInstalled = checkIsFantasticalInstalled()
-    var installationDate: Date?
     var now: Date = Date()
 
     // MARK: Top section ------------------------------------------------------
@@ -219,12 +218,10 @@ struct MenuBuilder {
             timeFormat: CalenbarTimeFormat(state.timeFormat),
             locale: I18N.instance.locale,
             now: now,
-            isFantasticalInstalled: isFantasticalInstalled,
             labels: .current
         )
         let summary = MeetingSummaryView(
             presentation: presentation,
-            providerIcon: getIconForMeetingService(presentation.meetingService),
             onJoin: onJoin
         )
         let hosting = NSHostingView(rootView: summary)
@@ -254,31 +251,7 @@ struct MenuBuilder {
         // avoids 5 `.loco()` lookups per ordinary timed event.
         let labels = CalenbarPanelLabels.current
 
-        // Header
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "E, d MMM"
-        dateFormatter.locale = I18N.instance.locale
-
-        let dateString = dateFormatter.string(from: date)
-        let dateTitle = "\(title) (\(dateString))"
-        let titleItem: NSMenuItem
-        if #available(macOS 14.0, *) {
-            titleItem = NSMenuItem.sectionHeader(title: dateTitle)
-        } else {
-            titleItem = NSMenuItem(title: dateTitle, action: nil, keyEquivalent: "")
-            titleItem.attributedTitle = NSAttributedString(
-                string: dateTitle,
-                attributes: [
-                    .font: NSFont.systemFont(
-                        ofSize: MenuStyleConstants.defaultFontSize - 2,
-                        weight: .semibold
-                    ),
-                    .foregroundColor: NSColor.secondaryLabelColor
-                ])
-            titleItem.isEnabled = false
-        }
-
-        items.append(titleItem)
+        items.append(NSMenuItem.sectionHeader(title: Self.sectionTitle(title, date: date)))
 
         // Events
         let sortedEvents = events.sorted {
@@ -309,6 +282,32 @@ struct MenuBuilder {
         }
 
         return items
+    }
+
+    /// "Today (Fri, 25 Sep)"
+    private static func sectionTitle(_ title: String, date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "E, d MMM"
+        dateFormatter.locale = I18N.instance.locale
+        return "\(title) (\(dateFormatter.string(from: date)))"
+    }
+
+    // MARK: Named section -----------------------------------------------------
+
+    /// A section showing at most `limit` visible events, soonest first, headed
+    /// by `title` and the first event's day, since its rows show only times.
+    /// Adds nothing when no event is visible.
+    func buildNamedSection(title: String, events: [MBEvent], limit: Int) -> [NSMenuItem] {
+        // Filter before limiting, so a hidden event can't use up the slot.
+        let visible = events
+            .filter { shouldRenderEvent($0) }
+            .sorted { $0.startDate < $1.startDate }
+            .prefix(limit)
+        guard let first = visible.first else { return [] }
+
+        let labels = CalenbarPanelLabels.current
+        return [NSMenuItem.sectionHeader(title: Self.sectionTitle(title, date: first.startDate))]
+            + visible.compactMap { makeEventItem($0, labels: labels) }
     }
 
     // MARK: Join section ------------------------------------------------------
@@ -428,40 +427,6 @@ struct MenuBuilder {
 
     func buildPreferencesSection() -> [NSMenuItem] {
         var items: [NSMenuItem] = []
-
-        let showChangelogItem = compareVersions(
-            state.appMajorVersion, state.lastRevisedMajorVersion)
-
-        if showChangelogItem {
-            let changelogItem = NSMenuItem(
-                title: "status_bar_whats_new".loco(),
-                action: #selector(StatusBarItemController.openChangelogAction),
-                keyEquivalent: ""
-            )
-            changelogItem.image = NSImage(named: NSImage.statusAvailableName)
-            changelogItem.target = target
-            items.append(changelogItem)
-        }
-
-        var showRateAppButton = true
-        if let installationDate {
-            let twoWeeksAfterInstallation = Calendar.current.date(
-                byAdding: .day,
-                value: 14,
-                to: installationDate
-            )!
-            showRateAppButton = now > twoWeeksAfterInstallation
-        }
-
-        if showRateAppButton {
-            let rateItem = NSMenuItem(
-                title: "status_bar_rate_app".loco(),
-                action: #selector(StatusBarItemController.rateApp),
-                keyEquivalent: ""
-            )
-            rateItem.target = target
-            items.append(rateItem)
-        }
 
         let preferencesItem = NSMenuItem(
             title: "\("status_bar_preferences".loco())…",

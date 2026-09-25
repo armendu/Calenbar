@@ -8,11 +8,7 @@ import XCTest
 @testable import MeetingBarLogic
 
 final class StatusBarIconPolicyTests: XCTestCase {
-    private let assets = StatusBarIconAssets(
-        appIcon: "AppIcon",
-        calendarCheckmark: "iconCalendarCheckmark",
-        calendar: "iconCalendar"
-    )
+    private let assets = StatusBarIconAssets(appIcon: "AppIcon")
 
     private func icon(
         mode: StatusBarTitleMode,
@@ -69,10 +65,10 @@ final class StatusBarIconPolicyTests: XCTestCase {
         XCTAssertEqual(icon(mode: .afterThreshold, format: .appicon), .asset(assets.appIcon))
     }
 
-    func testAfterThresholdNonAppIconFormatsReturnCalendar() {
-        XCTAssertEqual(icon(mode: .afterThreshold, format: .calendar), .asset(assets.calendar))
-        XCTAssertEqual(icon(mode: .afterThreshold, format: .eventtype), .asset(assets.calendar))
-        XCTAssertEqual(icon(mode: .afterThreshold, format: .none), .asset(assets.calendar))
+    func testAfterThresholdNonAppIconFormatsReturnTodaysDate() {
+        XCTAssertEqual(icon(mode: .afterThreshold, format: .calendar), .todaysDate)
+        XCTAssertEqual(icon(mode: .afterThreshold, format: .eventtype), .todaysDate)
+        XCTAssertEqual(icon(mode: .afterThreshold, format: .none), .todaysDate)
     }
 
     // MARK: - nextEvent
@@ -102,25 +98,22 @@ final class StatusBarIconPolicyTests: XCTestCase {
         )
     }
 
-    func testNextEventCalendarFormatReturnsCalendarAsset() {
-        XCTAssertEqual(
-            icon(mode: .nextEvent, format: .calendar),
-            .asset("iconCalendar")
-        )
+    /// The calendar format shows today's date, the same icon as when nothing
+    /// is coming up, so the status item doesn't switch glyphs.
+    func testNextEventCalendarFormatReturnsTodaysDate() {
+        XCTAssertEqual(icon(mode: .nextEvent, format: .calendar), .todaysDate)
     }
 
     // MARK: - boundary cases
 
-    func testFormatAssetNameOverridesAssetsForCustomFormat() {
-        // Even if a future build adds new EventTitleIconFormat cases, the
-        // policy passes the format's rawValue through transparently for
-        // .appicon / .calendar so user-visible behavior matches the asset
-        // pinned to the Defaults enum, not the StatusBarIconAssets table.
+    func testFormatAssetNameOverridesAssetsForAppIconFormat() {
+        // .appicon passes the format's asset name through, so behavior follows
+        // the asset pinned to the Defaults enum, not the StatusBarIconAssets table.
         let custom = icon(
             mode: .nextEvent,
-            format: .calendar,
-            formatAssetName: "future_calendar_icon"
+            format: .appicon,
+            formatAssetName: "future_app_icon"
         )
-        XCTAssertEqual(custom, .asset("future_calendar_icon"))
+        XCTAssertEqual(custom, .asset("future_app_icon"))
     }
 }

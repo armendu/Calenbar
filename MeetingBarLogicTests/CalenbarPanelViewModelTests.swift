@@ -69,7 +69,6 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         CalenbarPanelViewModel.build(
             from: state,
             now: now,
-            isFantasticalInstalled: false,
             locale: locale(),
             labels: labels
         )
@@ -98,6 +97,33 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agenda.first?.title, "Retro")
         XCTAssertEqual(viewModel.agenda.first?.id, later.id)
         XCTAssertNil(viewModel.emptyStateMessage)
+    }
+
+    /// A finished event still appears in today's agenda (it's part of the
+    /// day's history), but it must be flagged so the row can be rendered
+    /// de-emphasized — otherwise it reads as equally "upcoming" as the
+    /// still-future rows around it.
+    func testPastEventInAgendaIsFlaggedAsHasEnded() {
+        let next = makeEvent(
+            id: "upcoming",
+            title: "Upcoming",
+            startDate: now.addingTimeInterval(3600),
+            endDate: now.addingTimeInterval(5400)
+        )
+        let past = makeEvent(
+            id: "finished",
+            title: "Finished",
+            startDate: now.addingTimeInterval(-7200),
+            endDate: now.addingTimeInterval(-3600)
+        )
+        let state = makeState(nextEvent: next, todayEvents: [next, past])
+
+        let viewModel = build(state)
+
+        let pastRow = viewModel.agenda.first { $0.id == past.id }
+        XCTAssertEqual(pastRow?.hasEnded, true)
+        let upcomingRow = viewModel.agenda.first { $0.id == next.id }
+        XCTAssertNil(upcomingRow, "next event is excluded from the agenda — it's already the summary card")
     }
 
     /// The event already shown as the prominent summary card shouldn't also
@@ -229,7 +255,6 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let viewModel = CalenbarPanelViewModel.build(
             from: state,
             now: start.addingTimeInterval(-3600),
-            isFantasticalInstalled: false,
             locale: Locale(identifier: "en_US_POSIX"),
             labels: labels
         )
@@ -343,5 +368,46 @@ final class CalenbarPanelViewModelTests: XCTestCase {
         let viewModel = build(state)
 
         XCTAssertEqual(viewModel.summary?.eventTitle, "All-Hands")
+    }
+
+    // MARK: - Badges
+
+    private func row(isCurrent: Bool, service: MeetingServices?) -> CalenbarAgendaRow {
+        CalenbarAgendaRow(
+            id: "row",
+            title: "Row",
+            timeRangeText: "10:00 – 10:30",
+            meetingService: service,
+            isCurrent: isCurrent,
+            hasEnded: false
+        )
+    }
+
+    func testRunningEventBadgeIsLiveEvenWithAMeetingService() {
+        XCTAssertEqual(row(isCurrent: true, service: .zoom).badge, .live(hasMeeting: true))
+    }
+
+    func testRunningEventWithoutAMeetingServiceIsLiveWithoutMeeting() {
+        XCTAssertEqual(row(isCurrent: true, service: nil).badge, .live(hasMeeting: false))
+    }
+
+    func testUpcomingEventWithAMeetingServiceShowsTheService() {
+        XCTAssertEqual(row(isCurrent: false, service: .meet).badge, .service(.meet))
+    }
+
+    func testUpcomingEventWithoutAMeetingServiceIsPlain() {
+        XCTAssertEqual(row(isCurrent: false, service: nil).badge, .plain)
+    }
+
+    func testSummaryBadgeFollowsItsMeetingService() {
+        let withService = MeetingSummaryPresentation(
+            sectionTitle: "Next meeting", eventTitle: "Sync", metadata: [], meetingService: .teams
+        )
+        let without = MeetingSummaryPresentation(
+            sectionTitle: "Next meeting", eventTitle: "Sync", metadata: [], meetingService: nil
+        )
+
+        XCTAssertEqual(withService.badge, .service(.teams))
+        XCTAssertEqual(without.badge, .plain)
     }
 }

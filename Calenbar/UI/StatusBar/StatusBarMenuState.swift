@@ -40,6 +40,9 @@ struct StatusBarMenuState: Equatable {
 
     var todayEvents: [MBEvent] = []
     var tomorrowEvents: [MBEvent] = []
+    /// Later this week, soonest first, excluding days that already have
+    /// their own section. Feeds the classic menu's "This week" section.
+    var thisWeekEvents: [MBEvent] = []
     var nextEvent: MBEvent?
 
     // MARK: - Provider
@@ -77,20 +80,6 @@ struct StatusBarMenuState: Equatable {
 
     /// Time-format display (military vs am/pm) used when formatting event times.
     var timeFormat: TimeFormat = .military
-
-    // MARK: - Changelog / install state
-
-    /// Major-version prefix of the running app (e.g. "5.0").
-    var appMajorVersion: String = ""
-
-    /// Major-version prefix of the last release the user has acknowledged in
-    /// the changelog. When this differs from `appMajorVersion`, the menu shows
-    /// an unread-changelog hint.
-    var lastRevisedMajorVersion: String = ""
-
-    /// Whether the app was installed from the Mac App Store. Hides certain
-    /// release-channel UI when true.
-    var isInstalledFromAppStore: Bool = false
 
     // MARK: - Convenience accessors
 
@@ -153,6 +142,14 @@ extension StatusBarMenuState {
             Calendar.current.isDate($0.startDate, inSameDayAs: tomorrow)
         }
 
+        let thisWeekEvents = EventSelection.thisWeekEvents(
+            events + appState.laterThisWeekEvents,
+            startDate: \.startDate,
+            now: now,
+            calendar: .current,
+            skippingTomorrow: settings.events.showEventsForPeriod == .today_n_tomorrow
+        )
+
         let selectedCount = selectedCalendarIDs.count
         let nextEvent = events.nextEvent(now: now)
         let providerStatus = providerStatus(
@@ -163,6 +160,7 @@ extension StatusBarMenuState {
         return StatusBarMenuState(
             todayEvents: todayEvents,
             tomorrowEvents: tomorrowEvents,
+            thisWeekEvents: thisWeekEvents,
             nextEvent: nextEvent,
             activeProvider: activeProvider,
             providerHealth: providerHealth,
@@ -178,10 +176,7 @@ extension StatusBarMenuState {
             hasSelectedCalendars: selectedCount > 0,
             hasMultipleSelectedCalendars: selectedCount > 1,
             showTimeline: settings.menu.showTimelineInMenu,
-            timeFormat: Defaults[.timeFormat],
-            appMajorVersion: String(Defaults[.appVersion].dropLast(2)),
-            lastRevisedMajorVersion: String(Defaults[.lastRevisedVersionInChangelog].dropLast(2)),
-            isInstalledFromAppStore: Defaults[.isInstalledFromAppStore]
+            timeFormat: Defaults[.timeFormat]
         )
     }
 

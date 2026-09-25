@@ -107,4 +107,25 @@ final class StatusBarTitlePolicyTests: XCTestCase {
 
         XCTAssertEqual(result, "...")
     }
+
+    // MARK: - One-line title + time
+
+    func testInlineTextSeparatesTitleAndTimeWithADot() {
+        XCTAssertEqual(StatusBarTitlePolicy.inlineText(title: "Standup", time: "in 5m"), "Standup · in 5m")
+        XCTAssertEqual(StatusBarTitlePolicy.inlineText(title: "Standup", time: "now (30m left)"), "Standup · now (30m left)")
+    }
+
+    func testInlineTextWithoutTimeIsJustTheTitle() {
+        XCTAssertEqual(StatusBarTitlePolicy.inlineText(title: "Standup", time: ""), "Standup")
+    }
+
+    func testInlineTextWithoutTitleIsJustTheTime() {
+        XCTAssertEqual(StatusBarTitlePolicy.inlineText(title: "", time: "in 5m"), "in 5m")
+    }
+
+    /// The "dot" title format already renders the title as a bullet, so a
+    /// second separator would read "• · in 5m".
+    func testInlineTextDoesNotDoubleUpOnTheDotTitleFormat() {
+        XCTAssertEqual(StatusBarTitlePolicy.inlineText(title: "•", time: "in 5m"), "• in 5m")
+    }
 }

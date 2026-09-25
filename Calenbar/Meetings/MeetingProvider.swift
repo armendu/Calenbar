@@ -182,7 +182,7 @@ extension MeetingProvider {
                 .meet,
                 icon: "google_meet_icon",
                 height: 13.2,
-                pattern: #"https?://meet.google.com/(_meet/)?[a-z-]+"#,
+                pattern: #"https?://meet\.google\.com/(_meet/)?[a-z-]+"#,
                 openingModes: [.meetInOne, .googleMeetPWA]),
 
             // Proton Meet
@@ -541,7 +541,7 @@ extension MeetingProvider {
                 .gather,
                 icon: "gather_icon",
                 pattern:
-                    #"https?://app.gather.town/app/[A-Za-z0-9]+/[A-Za-z0-9_%\-]+\?(spawnToken|meeting)=[^\s]*"#
+                    #"https?://app\.gather\.town/app/[A-Za-z0-9]+/[A-Za-z0-9_%\-]+\?(spawnToken|meeting)=[^\s]*"#
             ),
 
             // Pop
@@ -596,7 +596,7 @@ extension MeetingProvider {
             make(
                 .calcom,
                 icon: "calcom_icon",
-                pattern: #"https?://app.cal\.com/video/[A-Za-z0-9./]+"#),
+                pattern: #"https?://app\.cal\.com/video/[A-Za-z0-9./]+"#),
 
             // zm.page
             make(

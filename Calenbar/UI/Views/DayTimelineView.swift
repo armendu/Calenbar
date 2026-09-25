@@ -188,7 +188,8 @@ struct DayRelativeTimelineView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
         }
-        .frame(maxWidth: .infinity)
+        // Asks for the menu's standard width but fills a wider menu.
+        .frame(minWidth: 0, idealWidth: MeetingSummaryView.preferredWidth, maxWidth: .infinity)
         .accessibilityLabel("timeline_accessibility_label".loco(segments.count))
     }
 

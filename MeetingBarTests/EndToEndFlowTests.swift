@@ -45,7 +45,6 @@ private final class EndToEndHarness {
     private(set) var snoozedEvents: [(eventID: String, action: NotificationEventTimeAction)] = []
     private(set) var providerChanges: [(provider: EventStoreProvider, signOut: Bool)] = []
     private(set) var openPreferencesCallCount = 0
-    private(set) var openChangelogCallCount = 0
 
     /// Strong reference to the installed in-app action sink. The scheduler's
     /// runner keeps only a weak reference, so the harness owns it for the test.
@@ -63,6 +62,7 @@ private final class EndToEndHarness {
 
         let environment = AppEnvironment(
             eventsPublisher: sync.$events.eraseToAnyPublisher(),
+            laterThisWeekEventsPublisher: sync.$laterThisWeekEvents.eraseToAnyPublisher(),
             calendarsPublisher: sync.$calendars
                 .map { ($0, sync.repository.activeProviderName) }
                 .eraseToAnyPublisher(),
@@ -113,8 +113,7 @@ private final class EndToEndHarness {
             appState: { [weak self] in self?.model.state ?? AppState() },
             events: { [weak self] in self?.model.state.events ?? [] },
             send: { [weak self] action in self?.model.send(action) },
-            openPreferences: { [weak self] in self?.openPreferencesCallCount += 1 },
-            openChangelog: { [weak self] in self?.openChangelogCallCount += 1 }
+            openPreferences: { [weak self] in self?.openPreferencesCallCount += 1 }
         ))
     }
 
@@ -286,7 +285,7 @@ class EndToEndFlowTestCase: BaseTestCase {
     /// `StatusBarItemController.updateTitle()` path and returns the button it
     /// drew into — the real end of the title pipeline, minus the NSStatusItem
     /// presentation which is out of scope. Assert on `attributedTitle.string`
-    /// and `image?.name()`.
+    /// and the button image.
     fileprivate func renderTitle(_ harness: EndToEndHarness) throws -> NSStatusBarButton {
         harness.controller.updateTitle()
         return try XCTUnwrap(harness.controller.statusItem.button)
@@ -518,10 +517,7 @@ final class StatusBarEndToEndFlowTests: EndToEndFlowTestCase {
         // Idle mode (no calendars): empty title, app-icon glyph.
         let button = try renderTitle(harness)
         XCTAssertEqual(button.attributedTitle.string, "")
-        XCTAssertEqual(
-            button.image?.name(),
-            MenuStyleConstants.iconNamed(MenuStyleConstants.appIconName).name()
-        )
+        XCTAssertTrue(button.image?.looksLike(assetNamed: MenuStyleConstants.appIconName) ?? false)
     }
 
     // MARK: Right-click entry point
@@ -542,28 +538,6 @@ final class StatusBarEndToEndFlowTests: EndToEndFlowTestCase {
         harness.controller.joinNextMeeting()
 
         XCTAssertEqual(harness.openedMeetingIDs, ["E1"])
-    }
-
-    // MARK: Changelog
-
-    func testWhatsNewItemSurfacesAndRoutesToChangelog() async throws {
-        configureDisplayDefaults()
-        Defaults[.appVersion] = "5.0.0"
-        Defaults[.lastRevisedVersionInChangelog] = "4.2.0"
-        let harness = makeHarness(events: [makeEvent(id: "E1", startingIn: 300)])
-        defer { harness.stop() }
-
-        await waitForState(of: harness, description: "event reaches AppModel") {
-            $0.events.count == 1
-        }
-
-        let whatsNew = try XCTUnwrap(flatten(rebuildMenu(harness)).first {
-            $0.action == #selector(StatusBarItemController.openChangelogAction)
-        })
-        XCTAssertEqual(whatsNew.title, "status_bar_whats_new".loco())
-
-        performClick(whatsNew)
-        XCTAssertEqual(harness.openChangelogCallCount, 1)
     }
 
     // MARK: Lifecycle refresh triggers
@@ -839,28 +813,67 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
         let harness = makeHarness(events: [
             makeEvent(id: "TODAY", startingIn: 300, now: now),
             makeEvent(id: "TMRW", startingIn: tomorrowOffset, now: now)
-        ])
+        ], configureStore: { $0.respectsDateRange = true })
         defer { harness.stop() }
 
-        await waitForState(of: harness, description: "events reach AppModel") {
-            $0.events.count == 2
+        // With "today only" there's no Tomorrow section. Tomorrow's event is
+        // still fetched and shown under "This week" when tomorrow falls in
+        // the current week, but it isn't one of the period's events.
+        let tomorrow = now.addingTimeInterval(tomorrowOffset)
+        let tomorrowIsThisWeek = Calendar.current.isDate(tomorrow, equalTo: now, toGranularity: .weekOfYear)
+        await waitForState(of: harness, description: "today's events reach AppModel") {
+            $0.events.map(\.id) == ["TODAY"]
+                && $0.laterThisWeekEvents.map(\.id) == (tomorrowIsThisWeek ? ["TMRW"] : [])
         }
-
         let todayOnly = menuTitles(harness)
         XCTAssertTrue(todayOnly.contains { $0.contains("Event TODAY") })
-        XCTAssertFalse(todayOnly.contains { $0.contains("Event TMRW") })
+        XCTAssertEqual(todayOnly.contains { $0.contains("Event TMRW") }, tomorrowIsThisWeek)
         XCTAssertFalse(todayOnly.contains {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
 
+        try? await settleRefreshWindow(harness)
         Defaults[.showEventsForPeriod] = .today_n_tomorrow
+        await waitForState(of: harness, description: "tomorrow joins the period") {
+            $0.events.map(\.id) == ["TODAY", "TMRW"] && $0.laterThisWeekEvents.isEmpty
+        }
 
+        // Tomorrow gets its own section, and "This week" doesn't repeat it.
         let bothDays = menuTitles(harness)
         XCTAssertTrue(bothDays.contains { $0.contains("Event TODAY") })
-        XCTAssertTrue(bothDays.contains { $0.contains("Event TMRW") })
+        XCTAssertEqual(bothDays.filter { $0.contains("Event TMRW") }.count, 1)
         XCTAssertTrue(bothDays.contains {
             $0.hasPrefix("status_bar_section_tomorrow".loco())
         })
+    }
+
+    /// The provider only returns events inside the requested range, so this
+    /// fails unless the fetch reaches past today to the end of the week.
+    func testThisWeekSectionShowsAnEventLaterThisWeek() async throws {
+        configureDisplayDefaults()
+        Defaults[.showEventsForPeriod] = .today_n_tomorrow
+        let now = Date()
+        let calendar = Calendar.current
+        guard let range = EventSelection.thisWeekRange(now: now, calendar: calendar, skippingTomorrow: true)
+        else { throw XCTSkip("No day of this week is left after tomorrow") }
+        let start = range.lowerBound.addingTimeInterval(10 * 3600)
+
+        let harness = makeHarness(events: [
+            makeEvent(id: "TODAY", startingIn: 300, now: now),
+            makeEvent(id: "LATER", startingIn: start.timeIntervalSince(now), now: now)
+        ], configureStore: { $0.respectsDateRange = true })
+        defer { harness.stop() }
+
+        await waitForState(of: harness, description: "the later event reaches AppModel") {
+            $0.laterThisWeekEvents.map(\.id) == ["LATER"]
+        }
+
+        let titles = menuTitles(harness)
+        XCTAssertTrue(titles.contains { $0.hasPrefix("status_bar_section_this_week".loco()) })
+        XCTAssertTrue(titles.contains { $0.contains("Event LATER") })
+        // Only the display period drives notifications and the next meeting.
+        XCTAssertEqual(harness.model.state.events.map(\.id), ["TODAY"])
+        XCTAssertFalse(scheduledEventIDs(harness).contains("LATER"))
     }
 
     func testDeclinedEventsHiddenBySettingEndToEnd() async throws {
@@ -931,12 +944,10 @@ final class CalendarSettingsEndToEndFlowTests: EndToEndFlowTestCase {
             $0.identifier == MenuBuilder.meetingSummaryItemIdentifier
         })
         // …and the status bar shows the "done for today" state, not the event:
-        // empty title with today's-date glyph (the real Calendar.app icon,
-        // via NSWorkspace — not a static named asset, so its .name() isn't
-        // comparable; just confirm an icon was actually set).
+        // empty title with the drawn today's-date glyph (a template image).
         let button = try renderTitle(harness)
         XCTAssertEqual(button.attributedTitle.string, "")
-        XCTAssertNotNil(button.image)
+        XCTAssertTrue(button.image?.isTemplate ?? false)
     }
 
     func testNetworkLossKeepsCachedEventsAndShowsStaleWarning() async throws {

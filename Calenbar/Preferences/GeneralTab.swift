@@ -122,31 +122,26 @@ struct PatronageAppSection: View {
 
             Divider()
 
-            // Primary support actions, made prominent with icons.
             HStack(spacing: 10) {
                 Button {
-                    Links.patreon.openInDefaultBrowser()
+                    WindowCoordinator().openChangelogWindow()
                 } label: {
-                    Label("Patreon", systemImage: "heart.fill")
+                    Label("status_bar_whats_new".loco(), systemImage: "sparkles")
                 }
+                // Calenbar isn't on the App Store, so rating it means starring the repo.
                 Button {
-                    Links.buymeacoffee.openInDefaultBrowser()
+                    Links.calenbarGitHub.openInDefaultBrowser()
                 } label: {
-                    Label("Buy Me A Coffee", systemImage: "cup.and.saucer.fill")
+                    Label("preferences_general_star_on_github".loco(), systemImage: "star")
                 }
                 Spacer()
             }
             .buttonStyle(.bordered)
-            .tint(.pink)
 
             // Secondary links + diagnostics, visually quieter.
             HStack(spacing: 16) {
-                Button("GitHub") {
-                    Links.github.openInDefaultBrowser()
-                }
-                .buttonStyle(.link)
-                Button("preferences_general_external_contact".loco()) {
-                    Links.emailMe.openInDefaultBrowser()
+                Button("preferences_general_report_issue".loco()) {
+                    Links.calenbarIssues.openInDefaultBrowser()
                 }
                 .buttonStyle(.link)
                 Spacer()

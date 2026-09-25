@@ -210,13 +210,13 @@ extension AppSettings {
                 filterEventRegexes: [],
                 dismissedEvents: [],
                 ongoingEventVisibility: .showTenMinBeforeNext,
-                showEventMaxTimeUntilEventEnabled: false,
+                showEventMaxTimeUntilEventEnabled: true,
                 showEventMaxTimeUntilEventThreshold: 60
             ),
             statusBar: StatusBarSettings(
                 eventTitleFormat: .show,
                 eventTimeFormat: .show,
-                eventTitleIconFormat: .none,
+                eventTitleIconFormat: .calendar,
                 statusbarEventTitleLength: statusbarEventTitleLengthLimits.max,
                 hideMeetingTitle: false,
                 showEventEndTime: true
@@ -224,7 +224,7 @@ extension AppSettings {
             menu: MenuSettings(
                 showTimelineInMenu: true,
                 shortenEventTitle: true,
-                menuEventTitleLength: 50,
+                menuEventTitleLength: 30,
                 showEventDetails: false,
                 showMeetingServiceIcon: true,
                 showEventCalendarColor: true

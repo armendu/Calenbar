@@ -199,6 +199,15 @@ struct ChangelogView: View {
                             Text("• Existing meeting opening defaults remain unchanged")
                         }
                     }
+                    if compareVersions("5.1.0", lastRevisedVersionInChangelog) {
+                        Section(header: Text("Version 5.1 – Calenbar")) {
+                            Text("• Liquid Glass panel with the next meeting, Join, and today's agenda")
+                            Text("• The menu bar shows a calendar with today's date by default")
+                            Text("• \"This week\" section in the menu with the next event later this week")
+                            Text("• The menu bar only shows events starting within an hour by default")
+                            Text("• Event URLs are only opened when they're web links")
+                        }
+                    }
                 }
             }.listStyle(SidebarListStyle())
             Button("general_close".loco(), action: close)

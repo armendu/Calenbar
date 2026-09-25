@@ -21,6 +21,35 @@ final class CalenbarPanelControllerTests: BaseTestCase {
         CalenbarPanelViewModel(summary: nil, agenda: [], emptyStateMessage: emptyStateMessage)
     }
 
+    /// A row hovered when the panel closes must still get its hover-off, or
+    /// its pointing-hand cursor stays pushed.
+    func test_dismissEndsHoverOnRowsInsideThePanel() throws {
+        let (item, button) = makeButton()
+        defer { NSStatusBar.system.removeStatusItem(item) }
+        let controller = CalenbarPanelController()
+        let existingWindows = Set(NSApp.windows.map(ObjectIdentifier.init))
+        controller.toggle(
+            near: button, viewModel: makeViewModel(),
+            onJoin: {}, onSelectAgendaRow: { _ in }, onShowClassicMenu: {}
+        )
+        let panel = try XCTUnwrap(NSApp.windows.first {
+            $0 is NSPanel && !existingWindows.contains(ObjectIdentifier($0))
+        })
+        let row = CalenbarHoverTrackingView()
+        var hoverChanges: [Bool] = []
+        row.onChange = { hoverChanges.append($0) }
+        panel.contentView?.addSubview(row)
+        row.mouseEntered(with: try XCTUnwrap(NSEvent.enterExitEvent(
+            with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: panel.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
+        )))
+
+        controller.dismiss()
+
+        XCTAssertEqual(hoverChanges, [true, false])
+        XCTAssertFalse(row.isShowingPointingHand)
+    }
+
     func test_toggleShowsPanel() {
         let (item, button) = makeButton()
         defer { NSStatusBar.system.removeStatusItem(item) }

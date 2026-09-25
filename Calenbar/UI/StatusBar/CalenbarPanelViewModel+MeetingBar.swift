@@ -5,12 +5,8 @@
 
 import Foundation
 
-// Adapters from the real, AppKit/Defaults-coupled production types
-// (`MBEvent`, `StatusBarMenuState`, `TimeFormat`) to the pure shadow types
-// `CalenbarPanelViewModel.swift` operates on. Mirrors
-// `StatusBarPresentation+MeetingBar.swift`'s `init(_ event: MBEvent)` /
-// `.current` pattern exactly. This file is app-target only — it is not
-// listed in Package.swift's `MeetingBarLogic` sources.
+// Converts the app's real types into the plain inputs CalenbarPanelViewModel
+// uses. App target only (not part of the MeetingBarLogic package).
 
 extension CalenbarEventInput {
     init(_ event: MBEvent) {
