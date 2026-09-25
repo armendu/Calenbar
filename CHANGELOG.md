@@ -7,6 +7,11 @@ Releases up to 5.0.0 are MeetingBar's.
 
 The first Calenbar release.
 
+Calenbar is distributed as a DMG on GitHub Releases, universal (Apple
+silicon and Intel) and signed ad hoc, since it has no Apple Developer ID.
+Signing in to Google Calendar directly isn't available in these builds;
+Google calendars added to macOS Calendar work.
+
 ### Changed defaults
 
 These apply to anyone who hasn't changed the setting themselves, including
