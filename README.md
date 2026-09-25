@@ -25,14 +25,14 @@ make build   # debug build in build/DerivedData/Build/Products/Debug
 make dmg     # release DMG in build/
 ```
 
-Pushing a version tag (`v5.1.0`) builds the DMG and publishes a GitHub release.
+To release, bump the version and add a `CHANGELOG.md` section for it. When that reaches `master`, the Release workflow tags the commit, builds the DMG and publishes it with that section as the release notes.
 
 ## Features
 
 - The current or next meeting in the menu bar, with a calendar icon showing today's date.
 - Left-click opens a panel with the next meeting, a Join button and today's agenda. **More…** opens the full menu, with a "This week" section, bookmarks and preferences.
 - Works with the calendars in macOS Calendar: iCloud, Google, Exchange, Office 365 and other accounts added there. Signing in to Google Calendar directly needs your own Google OAuth client in `XCConfig/DevTeamOverride.xcconfig`.
-- Detects links for 50+ meeting services, including Google Meet, Zoom, Microsoft Teams, Webex, Slack and Discord ([list](https://github.com/leits/MeetingBar/discussions/108)).
+- Detects links for 50+ meeting services, including Google Meet, Zoom, Microsoft Teams, Webex, Slack huddles and Discord ([list](https://github.com/leits/MeetingBar/discussions/108)).
 - Notifications and full-screen reminders before meetings.
 - Keyboard shortcuts, per-service browser or app choice, Shortcuts and AppleScript hooks.
 
