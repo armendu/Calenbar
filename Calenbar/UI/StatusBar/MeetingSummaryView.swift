@@ -66,7 +66,6 @@ struct MeetingSummaryView: View {
         .onTapGesture { onJoin?() }
         .accessibilityElement(children: .combine)
         .calenbarAccessibilityButton(onJoin)
-        // Join keeps the accent color in the classic menu too.
         .calenbarAppearsActive()
     }
 }

@@ -115,10 +115,7 @@ private struct MoreRow: View {
     }
 }
 
-/// The panel and the classic menu never become the focused window (they
-/// mustn't steal focus), so SwiftUI would draw their content as inactive:
-/// accent colors grey, including Join's. Like Control Center, they always
-/// look active.
+/// Keeps accent colors (like Join's) in the panel and menu, which never take focus.
 extension View {
     func calenbarAppearsActive() -> some View {
         environment(\.appearsActive, true)

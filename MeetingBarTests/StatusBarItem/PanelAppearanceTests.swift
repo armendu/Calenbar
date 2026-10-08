@@ -9,9 +9,7 @@ import XCTest
 
 @testable import Calenbar
 
-/// The panel never becomes the focused window, and SwiftUI draws controls in
-/// an unfocused window as inactive: accent colors turn grey, Join included.
-/// The panel's content should always look active, like Control Center's.
+/// Unfocused windows turn accent colors grey; the panel and menu card shouldn't.
 @MainActor
 final class PanelAppearanceTests: BaseTestCase {
     private final class Probe {
@@ -28,7 +26,6 @@ final class PanelAppearanceTests: BaseTestCase {
         }
     }
 
-    /// Renders `content` in an on-screen window that isn't focused, like the panel.
     private func render(_ content: some View) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 40, height: 40),
@@ -54,10 +51,7 @@ final class PanelAppearanceTests: BaseTestCase {
         XCTAssertEqual(probe.appearsActive, true)
     }
 
-    // The color itself can't be checked: Liquid Glass doesn't show up in a
-    // captured image. These check the real views set appearsActive.
-
-    /// Whether `view`, or a modifier inside it, sets appearsActive to true.
+    // Glass doesn't show up in captured images, so check the views set appearsActive.
     private func setsAppearsActive(_ view: Any, depth: Int = 0) -> Bool {
         guard depth < 12 else { return false }
         let children = Array(Mirror(reflecting: view).children)
@@ -80,7 +74,6 @@ final class PanelAppearanceTests: BaseTestCase {
         XCTAssertTrue(setsAppearsActive(panel.body))
     }
 
-    /// The card is also shown in the classic menu, which doesn't take focus either.
     func test_meetingCardAppearsActive() {
         XCTAssertTrue(setsAppearsActive(MeetingSummaryView(presentation: summary, onJoin: {}).body))
     }
