@@ -32,6 +32,7 @@ struct CalenbarGlassPanelView: View {
             }
         }
         .frame(width: Self.width)
+        .calenbarAppearsActive()
         .accessibilityElement(children: .contain)
     }
 
@@ -111,6 +112,13 @@ private struct MoreRow: View {
         .accessibilityLabel("calenbar_panel_more_accessibility_label".loco())
         .accessibilityHint("calenbar_panel_more_accessibility_hint".loco())
         .calenbarAccessibilityButton(onShowClassicMenu)
+    }
+}
+
+/// Keeps accent colors (like Join's) in the panel and menu, which never take focus.
+extension View {
+    func calenbarAppearsActive() -> some View {
+        environment(\.appearsActive, true)
     }
 }
 

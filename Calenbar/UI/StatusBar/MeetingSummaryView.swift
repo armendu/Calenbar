@@ -66,6 +66,7 @@ struct MeetingSummaryView: View {
         .onTapGesture { onJoin?() }
         .accessibilityElement(children: .combine)
         .calenbarAccessibilityButton(onJoin)
+        .calenbarAppearsActive()
     }
 }
 
