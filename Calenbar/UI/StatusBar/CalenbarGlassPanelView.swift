@@ -32,7 +32,7 @@ struct CalenbarGlassPanelView: View {
             }
         }
         .frame(width: Self.width)
-        .calenbarPanelAppearance()
+        .calenbarAppearsActive()
         .accessibilityElement(children: .contain)
     }
 
@@ -115,11 +115,12 @@ private struct MoreRow: View {
     }
 }
 
-/// The panel never becomes the focused window (it mustn't steal focus), so
-/// SwiftUI would draw it as inactive: accent colors grey, including Join's.
-/// Like Control Center, its content always looks active.
+/// The panel and the classic menu never become the focused window (they
+/// mustn't steal focus), so SwiftUI would draw their content as inactive:
+/// accent colors grey, including Join's. Like Control Center, they always
+/// look active.
 extension View {
-    func calenbarPanelAppearance() -> some View {
+    func calenbarAppearsActive() -> some View {
         environment(\.appearsActive, true)
     }
 }

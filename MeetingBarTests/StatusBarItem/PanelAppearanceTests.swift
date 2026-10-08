@@ -14,7 +14,7 @@ import XCTest
 /// The panel's content should always look active, like Control Center's.
 @MainActor
 final class PanelAppearanceTests: BaseTestCase {
-    private final class Probe: ObservableObject {
+    private final class Probe {
         var appearsActive: Bool?
     }
 
@@ -50,7 +50,42 @@ final class PanelAppearanceTests: BaseTestCase {
 
     func test_panelContentAppearsActiveInAnUnfocusedWindow() {
         let probe = Probe()
-        render(ProbeView(probe: probe).calenbarPanelAppearance())
+        render(ProbeView(probe: probe).calenbarAppearsActive())
         XCTAssertEqual(probe.appearsActive, true)
+    }
+
+    // The color itself can't be checked: Liquid Glass doesn't show up in a
+    // captured image. These check the real views set appearsActive.
+
+    /// Whether `view`, or a modifier inside it, sets appearsActive to true.
+    private func setsAppearsActive(_ view: Any, depth: Int = 0) -> Bool {
+        guard depth < 12 else { return false }
+        let children = Array(Mirror(reflecting: view).children)
+        let keyPath = children.first { $0.label == "keyPath" }?.value as? AnyKeyPath
+        let value = children.first { $0.label == "value" }?.value as? Bool
+        if keyPath == \EnvironmentValues.appearsActive, value == true { return true }
+        return children.contains { setsAppearsActive($0.value, depth: depth + 1) }
+    }
+
+    private let summary = MeetingSummaryPresentation(
+        sectionTitle: "Next meeting", eventTitle: "Sync",
+        metadata: ["10:00 – 10:30"], meetingService: .zoom, countdown: "in 5m"
+    )
+
+    func test_panelAppearsActive() {
+        let panel = CalenbarGlassPanelView(
+            viewModel: CalenbarPanelViewModel(summary: summary, agenda: [], emptyStateMessage: nil),
+            onJoin: {}, onSelectAgendaRow: { _ in }, onShowClassicMenu: {}
+        )
+        XCTAssertTrue(setsAppearsActive(panel.body))
+    }
+
+    /// The card is also shown in the classic menu, which doesn't take focus either.
+    func test_meetingCardAppearsActive() {
+        XCTAssertTrue(setsAppearsActive(MeetingSummaryView(presentation: summary, onJoin: {}).body))
+    }
+
+    func test_viewsWithoutTheModifierAreNotDetected() {
+        XCTAssertFalse(setsAppearsActive(Text("x").padding()))
     }
 }

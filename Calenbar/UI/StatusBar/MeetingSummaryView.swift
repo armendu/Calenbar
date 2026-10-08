@@ -43,8 +43,6 @@ struct MeetingSummaryView: View {
                 Button("notifications_meetingbar_join_event_action".loco(), action: onJoin)
                     .buttonStyle(.glassProminent)
                     .fontWeight(.semibold)
-                    // Accent even in the classic menu, which isn't the focused window either.
-                    .calenbarPanelAppearance()
             }
         }
         .padding(.horizontal, 12)
@@ -68,6 +66,8 @@ struct MeetingSummaryView: View {
         .onTapGesture { onJoin?() }
         .accessibilityElement(children: .combine)
         .calenbarAccessibilityButton(onJoin)
+        // Join keeps the accent color in the classic menu too.
+        .calenbarAppearsActive()
     }
 }
 
