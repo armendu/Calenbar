@@ -3,6 +3,11 @@
 Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
 Releases up to 5.0.0 are MeetingBar's.
 
+## 5.1.1 (2026-10-08)
+
+* The Join button now uses your accent color, in the panel and the menu.
+* With Icon color set to Accent color, the event icons keep that color too.
+
 ## 5.1.0 (2026-09-25)
 
 The first Calenbar release, as a universal DMG for macOS 26.
