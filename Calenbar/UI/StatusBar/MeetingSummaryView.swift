@@ -43,6 +43,8 @@ struct MeetingSummaryView: View {
                 Button("notifications_meetingbar_join_event_action".loco(), action: onJoin)
                     .buttonStyle(.glassProminent)
                     .fontWeight(.semibold)
+                    // Accent even in the classic menu, which isn't the focused window either.
+                    .calenbarPanelAppearance()
             }
         }
         .padding(.horizontal, 12)
