@@ -119,11 +119,11 @@
 				144C01762462D0C3000C9FFC /* Frameworks */,
 				144C01772462D0C3000C9FFC /* Resources */,
 				4616E3A829BB62F900665FE0 /* Copy “Launch at Login Helper” */,
-				467351B529055E9900EE3987 /* Run Script */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5A1E7C0D2EA4F10000C0FFEE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				37826AE02DAEFAAD00A6BFF8 /* Calenbar */,
@@ -217,6 +217,7 @@
 				1418907D26F23CF600DCD9B1 /* XCRemoteSwiftPackageReference "Defaults" */,
 				4616E3A529BB62D100665FE0 /* XCRemoteSwiftPackageReference "LaunchAtLogin" */,
 				467D98072DDB4ED700EB205C /* XCRemoteSwiftPackageReference "AppAuth-iOS" */,
+				5A1E7C0B2EA4F10000C0FFEE /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
 			productRefGroup = 144C017A2462D0C3000C9FFC /* Products */;
 			projectDirPath = "";
@@ -265,25 +266,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${BUILT_PRODUCTS_DIR}/LaunchAtLogin_LaunchAtLogin.bundle/Contents/Resources/copy-helper-swiftpm.sh\"\n";
 		};
-		467351B529055E9900EE3987 /* Run Script */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Run Script";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\nexport PATH=\"$PATH:/opt/homebrew/bin\"\nif which swiftlint > /dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -308,6 +290,10 @@
 			isa = PBXTargetDependency;
 			target = 144C01782462D0C3000C9FFC /* Calenbar */;
 			targetProxy = 14619A2025EC26DF00F3098F /* PBXContainerItemProxy */;
+		};
+		5A1E7C0D2EA4F10000C0FFEE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = 5A1E7C0C2EA4F10000C0FFEE /* SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -615,6 +601,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		5A1E7C0B2EA4F10000C0FFEE /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
+			requirement = {
+				kind = exactVersion;
+				version = 0.65.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -642,6 +636,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 467D98072DDB4ED700EB205C /* XCRemoteSwiftPackageReference "AppAuth-iOS" */;
 			productName = AppAuthCore;
+		};
+		5A1E7C0C2EA4F10000C0FFEE /* SwiftLintBuildToolPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5A1E7C0B2EA4F10000C0FFEE /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
+			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
