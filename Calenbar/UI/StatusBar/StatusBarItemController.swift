@@ -156,9 +156,7 @@ final class StatusBarItemController {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        statusItem = NSStatusBar.system.statusItem(
-            withLength: NSStatusItem.variableLength
-        )
+        statusItem = NSStatusBar.system.makeCalenbarStatusItem()
 
         statusItemMenu = NSMenu(title: "MeetingBar in Status Bar Menu")
 

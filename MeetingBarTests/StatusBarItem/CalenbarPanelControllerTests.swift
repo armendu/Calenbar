@@ -9,7 +9,7 @@ import XCTest
 @MainActor
 final class CalenbarPanelControllerTests: BaseTestCase {
     private func makeButton() -> (NSStatusItem, NSStatusBarButton) {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let item = NSStatusBar.system.makeCalenbarStatusItem()
         guard let button = item.button else {
             XCTFail("expected NSStatusItem to vend a button")
             return (item, NSStatusBarButton())
