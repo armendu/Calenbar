@@ -57,3 +57,12 @@ identifier_name:
   allowed_symbols: ["_"]
   validates_start_with_lowercase: warning
   excluded: [x, y, a, b, x1, x2, y1, y2]
+
+custom_rules:
+  calendar_selection_writes:
+    name: "Calendar selection writes"
+    regex: 'Defaults\[\.selectedCalendarIDs(ByProvider)?\]\s*(=[^=]|\.(append|remove|insert))'
+    included: '(^|/)Calenbar/.*\.swift$'
+    excluded: '(^|/)(Calenbar/Settings/AppSettings\.swift|MeetingBarTests/.*|MeetingBarLogicTests/.*)$'
+    message: "Write calendar selections through AppSettings: the UI reads selectedCalendarIDs and fetching reads selectedCalendarIDsByProvider, so they must change together."
+    severity: error

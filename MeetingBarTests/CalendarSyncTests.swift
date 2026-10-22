@@ -108,6 +108,41 @@ class CalendarSyncTests: BaseTestCase {
             Set([primary.id, shared.id])
         )
     }
+
+    /// Regression: defaults where the mirror still listed the selected
+    /// calendars but the per-provider map was empty. Preferences showed the
+    /// calendars checked while every fetch asked for no calendars, so events
+    /// never appeared. Fetching must repair the map before asking the provider.
+    func testFetchRepairsEmptyProviderSelection() async {
+        let event = makeFakeEvent(
+            id: "E1",
+            start: Date().addingTimeInterval(60),
+            end: Date().addingTimeInterval(3600)
+        )
+        Defaults[.eventStoreProvider] = .macOSEventKit
+        Defaults[.selectedCalendarIDs] = [event.calendar.id]
+        Defaults[.selectedCalendarIDsByProvider] = [EventStoreProvider.macOSEventKit.rawValue: []]
+        Defaults[.selectedCalendarIDsByProviderMigrated] = true
+
+        let store = FakeEventStore(calendars: [event.calendar], events: [event])
+        store.respectsCalendarFilter = true
+        let repository = CalendarRepository(providerName: .macOSEventKit) { _ in store }
+        let manager = CalendarSync(repository: repository, refreshInterval: 0)
+
+        let eventsExp = expectation(description: "selected calendar's event published")
+        manager.$events
+            .drop(while: \.isEmpty)
+            .first()
+            .sink { events in
+                XCTAssertEqual(events.map(\.id), [event.id])
+                eventsExp.fulfill()
+            }
+            .store(in: &cancellables)
+        await fulfillment(of: [eventsExp], timeout: 1.0)
+
+        XCTAssertEqual(store.fetchedEventCalendarIDs.first, [event.calendar.id])
+        XCTAssertEqual(AppSettings.selectedCalendarIDs(for: .macOSEventKit), [event.calendar.id])
+    }
 }
 
 @MainActor class CalendarSyncSwitchProviderTests: BaseTestCase {

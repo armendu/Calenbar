@@ -86,6 +86,84 @@ final class AppSettingsTests: BaseTestCase {
         XCTAssertTrue(Defaults[.selectedCalendarIDsByProviderMigrated])
     }
 
+    func testReconcileRestoresProviderSelectionFromMirror() {
+        Defaults[.eventStoreProvider] = .macOSEventKit
+        Defaults[.selectedCalendarIDs] = ["cal-1", "cal-2"]
+        Defaults[.selectedCalendarIDsByProvider] = [EventStoreProvider.macOSEventKit.rawValue: []]
+        Defaults[.selectedCalendarIDsByProviderMigrated] = true
+
+        AppSettings.reconcileSelectedCalendars()
+
+        XCTAssertEqual(AppSettings.selectedCalendarIDs(for: .macOSEventKit), ["cal-1", "cal-2"])
+        XCTAssertEqual(Defaults[.selectedCalendarIDs], ["cal-1", "cal-2"])
+    }
+
+    func testReconcileRestoresMirrorFromProviderSelection() {
+        Defaults[.eventStoreProvider] = .macOSEventKit
+        Defaults[.selectedCalendarIDs] = ["stale"]
+        Defaults[.selectedCalendarIDsByProvider] = [
+            EventStoreProvider.macOSEventKit.rawValue: ["cal-1"],
+            EventStoreProvider.googleCalendar.rawValue: ["primary"]
+        ]
+        Defaults[.selectedCalendarIDsByProviderMigrated] = true
+
+        AppSettings.reconcileSelectedCalendars()
+
+        XCTAssertEqual(Defaults[.selectedCalendarIDs], ["cal-1"])
+        XCTAssertEqual(AppSettings.selectedCalendarIDs(for: .googleCalendar), ["primary"])
+    }
+
+    func testReconcileLeavesConsistentSelectionAlone() {
+        Defaults[.eventStoreProvider] = .macOSEventKit
+        Defaults[.selectedCalendarIDs] = []
+        Defaults[.selectedCalendarIDsByProvider] = [EventStoreProvider.macOSEventKit.rawValue: []]
+        Defaults[.selectedCalendarIDsByProviderMigrated] = true
+
+        AppSettings.reconcileSelectedCalendars()
+
+        XCTAssertTrue(Defaults[.selectedCalendarIDs].isEmpty)
+        XCTAssertTrue(AppSettings.selectedCalendarIDs(for: .macOSEventKit).isEmpty)
+    }
+
+    /// The UI reads `selectedCalendarIDs` and fetching reads the per-provider
+    /// map, so every write helper must leave them equal or events silently
+    /// stop loading while calendars still look selected.
+    func testCalendarWriteHelpersKeepMirrorInSyncWithProviderSelection() {
+        func assertInSync(_ step: String, line: UInt = #line) {
+            XCTAssertEqual(
+                Defaults[.selectedCalendarIDs],
+                AppSettings.selectedCalendarIDs(for: Defaults[.eventStoreProvider]),
+                step,
+                line: line
+            )
+        }
+
+        Defaults[.eventStoreProvider] = .macOSEventKit
+        Defaults[.selectedCalendarIDs] = ["legacy"]
+        AppSettings.migrateSelectedCalendarsByProviderIfNeeded()
+        assertInSync("migrate")
+
+        AppSettings.setCalendarSelection(id: "eventkit-1", selected: true)
+        assertInSync("select")
+        AppSettings.setCalendarSelection(id: "legacy", selected: false)
+        assertInSync("deselect")
+
+        AppSettings.setEventStoreProvider(.googleCalendar)
+        assertInSync("switch to Google")
+        AppSettings.setCalendarSelection(id: "primary", selected: true)
+        assertInSync("select on Google")
+
+        AppSettings.setEventStoreProvider(.macOSEventKit)
+        assertInSync("switch back to EventKit")
+        XCTAssertEqual(Defaults[.selectedCalendarIDs], ["eventkit-1"])
+
+        AppSettings.clearSelectedCalendars()
+        assertInSync("clear")
+
+        AppSettings.reconcileSelectedCalendars()
+        assertInSync("reconcile")
+    }
+
     func testCompleteOnboardingWriteHelper() {
         AppSettings.completeOnboarding()
 
