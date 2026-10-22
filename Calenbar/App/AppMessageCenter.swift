@@ -165,7 +165,7 @@ struct AppMessageCenter: Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         xctestLoaded: Bool = NSClassFromString("XCTestCase") != nil
     ) -> Bool {
-        xctestLoaded || environment["XCTestConfigurationFilePath"] != nil
+        TestHostDetection.isHostingTests(environment: environment, xctestLoaded: xctestLoaded)
     }
 
     private let notificationsEnabled: NotificationsEnabled

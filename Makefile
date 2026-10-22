@@ -2,7 +2,6 @@ PROJECT := Calenbar.xcodeproj
 SCHEME := Calenbar
 XCODEBUILD ?= xcodebuild
 SWIFT ?= swift
-SWIFTLINT ?= swiftlint
 BUILD_DIR ?= build
 COVERAGE_DIR := $(BUILD_DIR)/coverage
 XCODE_RESULT_BUNDLE := $(COVERAGE_DIR)/Calenbar.xcresult
@@ -10,7 +9,10 @@ DERIVED_DATA_DIR := $(BUILD_DIR)/DerivedData
 XCODE_SOURCE_PACKAGES_DIR := $(BUILD_DIR)/SourcePackages
 HOST_ARCH := $(shell uname -m)
 DESTINATION ?= platform=macOS,arch=$(HOST_ARCH)
-XCODEBUILD_FLAGS := -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile
+XCODEBUILD_FLAGS := -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation
+# SwiftLint comes from the project's SwiftLintPlugins package (pinned in Package.resolved), not a system install.
+SWIFTLINT_BIN := $(XCODE_SOURCE_PACKAGES_DIR)/artifacts/swiftlintplugins/SwiftLintBinary/SwiftLintBinary.artifactbundle/macos/swiftlint
+SWIFTLINT ?= $(SWIFTLINT_BIN)
 LOCAL_CODESIGN_FLAGS := CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 LOGIC_COVERAGE_SOURCES := Calenbar/Calendar Calenbar/Meetings Calenbar/Notifications Calenbar/UI/StatusBar Calenbar/Utilities/Diagnostics
 
@@ -36,7 +38,7 @@ build-release:
 # Universal Release build, signed ad hoc and packaged as build/Calenbar-<version>.dmg.
 dmg:
 	@mkdir -p $(BUILD_DIR)
-	@set -o pipefail; $(XCODEBUILD) -project $(PROJECT) -scheme $(SCHEME) -destination 'generic/platform=macOS' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile -configuration Release build ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO $(LOCAL_CODESIGN_FLAGS) 2>&1 | $(XCFILTER)
+	@set -o pipefail; $(XCODEBUILD) -project $(PROJECT) -scheme $(SCHEME) -destination 'generic/platform=macOS' -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation -configuration Release build ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO $(LOCAL_CODESIGN_FLAGS) 2>&1 | $(XCFILTER)
 	@Scripts/make_dmg.sh $(DERIVED_DATA_DIR)/Build/Products/Release/Calenbar.app $(BUILD_DIR)
 
 test: test-logic test-app
@@ -99,22 +101,15 @@ coverage-app-report:
 	@echo "Xcode app-hosted coverage (target summary):"
 	@set -o pipefail; xcrun xccov view --report --only-targets $(XCODE_RESULT_BUNDLE) 2>/dev/null | awk 'NR <= 2 || /Calenbar\.app/'
 
-lint:
-	@if command -v $(SWIFTLINT) >/dev/null 2>&1; then \
-		$(SWIFTLINT); \
-	else \
-		echo "SwiftLint is not installed. Install it from https://github.com/realm/SwiftLint"; \
-		exit 1; \
-	fi
+$(SWIFTLINT_BIN):
+	$(XCODEBUILD) -project $(PROJECT) -scheme $(SCHEME) -derivedDataPath $(DERIVED_DATA_DIR) -clonedSourcePackagesDirPath $(XCODE_SOURCE_PACKAGES_DIR) -onlyUsePackageVersionsFromResolvedFile -resolvePackageDependencies
 
-lint-fix:
-	@if command -v $(SWIFTLINT) >/dev/null 2>&1; then \
-		$(SWIFTLINT) --fix; \
-		$(SWIFTLINT); \
-	else \
-		echo "SwiftLint is not installed. Install it from https://github.com/realm/SwiftLint"; \
-		exit 1; \
-	fi
+lint: $(SWIFTLINT_BIN)
+	$(SWIFTLINT)
+
+lint-fix: $(SWIFTLINT_BIN)
+	$(SWIFTLINT) --fix
+	$(SWIFTLINT)
 
 open:
 	open $(PROJECT)

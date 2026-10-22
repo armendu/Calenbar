@@ -3,6 +3,11 @@
 Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
 Releases up to 5.0.0 are MeetingBar's.
 
+## 5.1.2 (2026-10-22)
+
+* Fixed events not showing even though their calendars were checked in
+  Preferences. Calenbar now repairs the saved calendar selection on its own.
+
 ## 5.1.1 (2026-10-08)
 
 * The Join button now uses your accent color, in the panel and the menu.

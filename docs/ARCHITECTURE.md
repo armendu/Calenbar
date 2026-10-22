@@ -314,7 +314,7 @@ Swift 6 strict concurrency is explicit in both Xcode settings and the SwiftPM lo
 CI is split by responsibility:
 
 - `ci.yml` validates localization keys, runs SwiftPM logic tests, and runs the Xcode app-hosted build/test path with coverage artifacts.
-- `lint.yml` runs SwiftLint.
+- `lint.yml` runs SwiftLint (`make lint`, using the project-pinned binary).
 - `security.yml` runs Dependency Review on pull requests, CodeQL Swift analysis on trusted refs, and the optional Codacy SARIF upload when its token is configured.
 
 The local unsigned Debug build may print the entitlements/code-signing warning when `CODE_SIGNING_REQUIRED=NO`; that is not a Swift warning and is expected for local verification.
@@ -427,12 +427,14 @@ make test            # Full suite with coverage (host + logic)
 make test-quiet      # Full suite with filtered output
 make test-logic      # Hostless logic tests only — fast
 make test-logic-quiet # Hostless logic tests with filtered output
-make lint            # SwiftLint
+make lint            # SwiftLint (project-pinned binary, no install needed)
 make validate-strings # Verify every .loco() key exists in en.lproj/Localizable.strings
 make open            # Open in Xcode
 ```
 
 Local dev team override: create `XCConfig/DevTeamOverride.xcconfig` (git-ignored) with `DEVELOPMENT_TEAM = <id>`.
+
+SwiftLint is not installed system-wide: the `SwiftLintPlugins` package runs `SwiftLintBuildToolPlugin` on every Calenbar build, and `make lint` uses the same pinned binary from `build/SourcePackages`. The first time Xcode builds the project it asks you to trust the plugin; `make` passes `-skipPackagePluginValidation` instead.
 
 SwiftLint disabled rules: `file_length`, `function_body_length`, `type_body_length`, `type_name`, `force_cast`, `force_try`, `force_unwrapping`. Line-length warning at 200, error at 250. Do not introduce new force unwraps in touched code unless the failure is impossible and a comment explains why.
 
@@ -448,6 +450,7 @@ Direct app dependencies are declared as Xcode Swift Package references in `Meeti
 | Defaults | `9.0.2 ..< 9.1.0` | `9.0.3` | Typed user defaults |
 | LaunchAtLogin | `5.0.2 ..< 6.0.0` | `5.0.2` | Login item integration |
 | AppAuth-iOS | `2.0.0 ..< 3.0.0` | `2.0.0` | Google OAuth |
+| SwiftLintPlugins | `0.65.1` (exact) | `0.65.1` | SwiftLint build-tool plugin and `make lint` binary (build-time only, not linked) |
 
 `swift-syntax 601.0.1` is currently transitive. StoreKit 2 is an Apple system framework used by `PatronageService`; it is not an external package dependency, and no external StoreKit package is used.
 
