@@ -330,6 +330,30 @@ extension AppSettings {
         Defaults[.selectedCalendarIDsByProviderMigrated] = true
     }
 
+    /// `selectedCalendarIDs` mirrors the active provider's entry in
+    /// `selectedCalendarIDsByProvider`, but the UI reads the mirror while
+    /// fetching reads the map. When something writes one without the other
+    /// (an older build, or a test run from before tests had their own suite), the
+    /// menu shows calendars as selected yet no events load. Repair from
+    /// whichever side still holds a selection.
+    @MainActor
+    static func reconcileSelectedCalendars() {
+        migrateSelectedCalendarsByProviderIfNeeded()
+
+        let providerKey = Defaults[.eventStoreProvider].rawValue
+        var selections = Defaults[.selectedCalendarIDsByProvider]
+        let providerSelection = selections[providerKey] ?? []
+        let mirror = Defaults[.selectedCalendarIDs]
+        guard providerSelection != mirror else { return }
+
+        if providerSelection.isEmpty {
+            selections[providerKey] = mirror
+            Defaults[.selectedCalendarIDsByProvider] = selections
+        } else {
+            Defaults[.selectedCalendarIDs] = providerSelection
+        }
+    }
+
     @MainActor
     static func completeOnboarding() {
         Defaults[.onboardingCompleted] = true

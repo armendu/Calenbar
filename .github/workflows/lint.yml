@@ -18,22 +18,36 @@ defaults:
   run:
     shell: bash
 
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
 jobs:
   swiftlint:
     name: SwiftLint
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Install SwiftLint
+      - name: Select Xcode
         run: |
-          if ! command -v swiftlint >/dev/null 2>&1; then
-            brew install swiftlint
+          if [ ! -d "$DEVELOPER_DIR" ]; then
+            echo "Expected Xcode not found at $DEVELOPER_DIR"
+            ls -1 /Applications | grep '^Xcode' || true
+            exit 1
           fi
-          swiftlint version
+          sudo xcode-select -s "$DEVELOPER_DIR"
+          xcodebuild -version
+
+      # SwiftLint is the binary pinned by the project's SwiftLintPlugins package;
+      # `make lint` resolves it into build/SourcePackages.
+      - name: Cache SwiftPM packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/SourcePackages
+          key: ${{ runner.os }}-lint-spm-${{ hashFiles('Calenbar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
 
       - name: Run SwiftLint
         run: make lint

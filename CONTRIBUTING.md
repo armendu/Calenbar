@@ -39,7 +39,7 @@ Common validation commands:
 make build            # Debug build
 make test             # SwiftPM logic tests + Xcode app-hosted tests with coverage
 make test-logic       # Hostless SwiftPM logic tests only
-make lint             # SwiftLint
+make lint             # SwiftLint (pinned by the project, nothing to install)
 make validate-strings # Verify English localization keys used by .loco()
 ```
 

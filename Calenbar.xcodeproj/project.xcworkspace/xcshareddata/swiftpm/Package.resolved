@@ -1,5 +1,5 @@
 {
-  "originHash" : "daad014aa7a4ab82e253eff023eb3bbc0779744e455a2aa8973f19802cd1bbc6",
+  "originHash" : "208a1c628fa0807dcb6c96f27703e62111e2fba821254a53b11bf2dd25f1802e",
   "pins" : [
     {
       "identity" : "appauth-ios",
@@ -44,6 +44,15 @@
       "state" : {
         "revision" : "f99ae8aa18f0cf0d53481901f88a0991dc3bd4a2",
         "version" : "601.0.1"
+      }
+    },
+    {
+      "identity" : "swiftlintplugins",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SimplyDanny/SwiftLintPlugins",
+      "state" : {
+        "revision" : "ef7d692fc6706e8f5628e26bcafaefa445c58a97",
+        "version" : "0.65.1"
       }
     }
   ],

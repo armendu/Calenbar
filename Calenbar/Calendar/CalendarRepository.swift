@@ -153,6 +153,7 @@ public final class CalendarRepository {
     /// need to know about either.
     public func fetchCurrentPeriodEvents(fromAllCalendars allCalendars: [MBCalendar]) async throws
         -> (events: [MBEvent], periodEnd: Date) {
+        AppSettings.reconcileSelectedCalendars()
         let selectedCalendarIDs = AppSettings.selectedCalendarIDs(for: activeProviderName)
         let selectedCalendars = allCalendars.filter {
             selectedCalendarIDs.contains($0.id)

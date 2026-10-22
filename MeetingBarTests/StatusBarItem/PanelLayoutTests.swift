@@ -43,7 +43,7 @@ final class PanelLayoutTests: BaseTestCase {
 
     /// Opens the panel for `viewModel` and returns its frame.
     private func openPanelFrame(_ viewModel: CalenbarPanelViewModel) throws -> NSRect {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let item = NSStatusBar.system.makeCalenbarStatusItem()
         defer { NSStatusBar.system.removeStatusItem(item) }
         let button = try XCTUnwrap(item.button)
         let controller = CalenbarPanelController()
