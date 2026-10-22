@@ -10,8 +10,11 @@ on:
 permissions:
   contents: read
 
+# Key on the event too: a push to a branch and a PR from that branch must not
+# share a group, or the PR run cancels the push run of the same commit and the
+# cancelled "Build and Test" check blocks master's branch protection.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 defaults:
