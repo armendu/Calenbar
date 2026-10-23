@@ -3,6 +3,12 @@
 Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
 Releases up to 5.0.0 are MeetingBar's.
 
+## 5.1.3 (2026-10-23)
+
+* Fixed an empty agenda after installing or updating Calenbar. It now asks
+  for calendar access when macOS hasn't been asked yet, and shows Grant
+  permission when access is off or set to Add Events Only.
+
 ## 5.1.2 (2026-10-22)
 
 * Fixed events not showing even though their calendars were checked in
