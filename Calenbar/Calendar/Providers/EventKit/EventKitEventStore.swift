@@ -19,6 +19,8 @@ extension EKEventStore: @unchecked @retroactive Sendable {}
 
 extension EKEventStore: AuthenticatedEventStore {
     nonisolated(unsafe) static var shared = EKEventStore()
+    /// Replaced only by tests.
+    nonisolated(unsafe) static var accessGate = EventKitAccessGate.live
 
     public func signIn(forcePrompt: Bool = false) async throws {
         try await withCheckedThrowingContinuation { cont in
@@ -52,14 +54,7 @@ extension EKEventStore: AuthenticatedEventStore {
         // Without full access EventKit silently returns no calendars, so check
         // first: ask when macOS hasn't decided, and fail otherwise so the UI
         // shows "permission required" instead of an empty agenda.
-        switch EventKitAccess.action(for: EKEventStore.authorizationStatus(for: .event)) {
-        case .proceed:
-            break
-        case .request:
-            try await signIn()
-        case let .fail(error):
-            throw error
-        }
+        try await Self.accessGate.ensureAccess()
 
         // Move enumeration off the main thread so a large source/calendar
         // list does not hang the UI. EKEventStore is @unchecked Sendable

@@ -47,3 +47,27 @@ enum EventKitAccess {
         }
     }
 }
+
+/// Checks calendar access before a fetch, asking macOS when it hasn't decided.
+/// The status and the request are injectable so tests can drive every case
+/// through the real `fetchAllCalendars()`.
+struct EventKitAccessGate: Sendable {
+    var status: @Sendable () -> EKAuthorizationStatus
+    var requestAccess: @Sendable () async throws -> Void
+
+    static let live = EventKitAccessGate(
+        status: { EKEventStore.authorizationStatus(for: .event) },
+        requestAccess: { try await EKEventStore.shared.signIn() }
+    )
+
+    func ensureAccess() async throws {
+        switch EventKitAccess.action(for: status()) {
+        case .proceed:
+            return
+        case .request:
+            try await requestAccess()
+        case let .fail(error):
+            throw error
+        }
+    }
+}

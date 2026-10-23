@@ -95,8 +95,84 @@ final class EventKitAccessTests: BaseTestCase {
         cancellable.cancel()
     }
 
+    // MARK: - The real EventKit fetch
+
+    /// The bug behind 5.1.3: a build macOS hadn't been asked about fetched
+    /// nothing and never prompted. The fetch itself must ask.
+    func testFetchRequestsAccessWhenUndecided() async throws {
+        let requests = Counter()
+        try await withAccessGate(
+            EventKitAccessGate(status: { .notDetermined }, requestAccess: { requests.increment() })
+        ) {
+            _ = try await EKEventStore.shared.fetchAllCalendars()
+        }
+        XCTAssertEqual(requests.value, 1)
+    }
+
+    func testFetchDoesNotPromptWithFullAccess() async throws {
+        let requests = Counter()
+        try await withAccessGate(
+            EventKitAccessGate(status: { .fullAccess }, requestAccess: { requests.increment() })
+        ) {
+            _ = try await EKEventStore.shared.fetchAllCalendars()
+        }
+        XCTAssertEqual(requests.value, 0)
+    }
+
+    func testFetchFailsWithoutReadAccess() async {
+        let cases: [(EKAuthorizationStatus, EventKitAccessError)] = [
+            (.denied, .notGranted), (.restricted, .notGranted), (.writeOnly, .writeOnly)
+        ]
+        for (status, expected) in cases {
+            do {
+                try await withAccessGate(EventKitAccessGate(status: { status }, requestAccess: {})) {
+                    _ = try await EKEventStore.shared.fetchAllCalendars()
+                }
+                XCTFail("Fetch succeeded with \(status.rawValue)")
+            } catch {
+                XCTAssertEqual(error as? EventKitAccessError, expected)
+            }
+        }
+    }
+
+    func testDeclinedPromptFailsTheFetch() async {
+        do {
+            try await withAccessGate(
+                EventKitAccessGate(
+                    status: { .notDetermined },
+                    requestAccess: { throw EventKitAccessError.notGranted }
+                )
+            ) {
+                _ = try await EKEventStore.shared.fetchAllCalendars()
+            }
+            XCTFail("Fetch succeeded after the prompt was declined")
+        } catch {
+            XCTAssertEqual(error as? EventKitAccessError, .notGranted)
+        }
+    }
+
+    private func withAccessGate(
+        _ gate: EventKitAccessGate,
+        _ body: () async throws -> Void
+    ) async throws {
+        let original = EKEventStore.accessGate
+        EKEventStore.accessGate = gate
+        defer { EKEventStore.accessGate = original }
+        try await body()
+    }
+
     func testDiagnosticsReportWriteOnlyAccess() {
         XCTAssertEqual(PermissionReporter.calendarAccess(for: .writeOnly), .writeOnly)
         XCTAssertEqual(PermissionReporter.calendarAccess(for: .fullAccess), .authorized)
     }
+}
+
+/// Counts calls from the gate's `@Sendable` closures.
+private final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int { lock.withLock { count } }
+
+    func increment() { lock.withLock { count += 1 } }
 }
