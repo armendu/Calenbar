@@ -187,6 +187,10 @@ extension StatusBarMenuState {
         if health.authRequired {
             return .authRequired(message: health.lastErrorDescription)
         }
+        // Before stale: every failure is stale, and a refresh can't fix missing access.
+        if health.permissionRequired {
+            return .permissionRequired(message: health.lastErrorDescription)
+        }
         if health.isStale {
             return .stale(
                 lastRefresh: health.lastSuccessfulRefresh,
