@@ -16,6 +16,7 @@ struct PermissionSnapshot: Equatable {
         case notDetermined
         case restricted
         case denied
+        case writeOnly
         case authorized
     }
 
@@ -115,6 +116,7 @@ enum DiagnosticsReport {
         switch perms.calendarAccess {
         case .authorized: calendar = "authorized"
         case .denied: calendar = "denied"
+        case .writeOnly: calendar = "write only (can't read events)"
         case .restricted: calendar = "restricted"
         case .notDetermined: calendar = "not determined"
         }

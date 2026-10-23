@@ -14,19 +14,24 @@ public struct ProviderHealth: Equatable {
     /// True when the displayed data comes from a preserved snapshot, not the latest fetch attempt.
     public var isStale: Bool
     public var authRequired: Bool
+    /// True when macOS calendar access is missing (see `EventKitAccessError`),
+    /// so the UI can ask for it instead of offering a refresh.
+    public var permissionRequired: Bool
 
     public init(
         lastSuccessfulRefresh: Date? = nil,
         lastAttemptedRefresh: Date? = nil,
         lastErrorDescription: String? = nil,
         isStale: Bool = false,
-        authRequired: Bool = false
+        authRequired: Bool = false,
+        permissionRequired: Bool = false
     ) {
         self.lastSuccessfulRefresh = lastSuccessfulRefresh
         self.lastAttemptedRefresh = lastAttemptedRefresh
         self.lastErrorDescription = lastErrorDescription
         self.isStale = isStale
         self.authRequired = authRequired
+        self.permissionRequired = permissionRequired
     }
 }
 
@@ -51,8 +56,19 @@ extension ProviderHealth {
             lastAttemptedRefresh: attempted,
             lastErrorDescription: Self.errorDescription(error),
             isStale: true,
-            authRequired: Self.isAuthRequired(error)
+            authRequired: Self.isAuthRequired(error),
+            permissionRequired: Self.isPermissionRequired(error)
         )
+    }
+
+    private static func isPermissionRequired(_ error: Error) -> Bool {
+        switch error {
+        case let CalendarSyncError.calendarAccessFailed(underlying),
+             let CalendarSyncError.eventFetchFailed(underlying):
+            return isPermissionRequired(underlying)
+        default:
+            return error is EventKitAccessError
+        }
     }
 
     private static func errorDescription(_ error: Error) -> String {

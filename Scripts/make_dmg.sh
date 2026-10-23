@@ -42,7 +42,7 @@ if [ -d "$HELPER" ]; then
     codesign --force --options runtime --entitlements "$WORK/helper.entitlements" --sign - "$HELPER"
 fi
 codesign --force --options runtime --entitlements "$WORK/app.entitlements" --sign - "$APP"
-codesign --verify --deep --strict "$APP"
+"$ROOT/Scripts/verify_release_app.sh" "$APP"
 
 mkdir -p "$WORK/dmg" "$OUTPUT_DIR"
 cp -R "$APP" "$WORK/dmg/"

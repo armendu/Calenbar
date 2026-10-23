@@ -19,6 +19,8 @@ extension EKEventStore: @unchecked @retroactive Sendable {}
 
 extension EKEventStore: AuthenticatedEventStore {
     nonisolated(unsafe) static var shared = EKEventStore()
+    /// Replaced only by tests.
+    nonisolated(unsafe) static var accessGate = EventKitAccessGate.live
 
     public func signIn(forcePrompt: Bool = false) async throws {
         try await withCheckedThrowingContinuation { cont in
@@ -29,7 +31,7 @@ extension EKEventStore: AuthenticatedEventStore {
 
                     EKEventStore.shared = EKEventStore(sources: sources)
                     cont.resume()
-                } else { cont.resume(throwing: error ?? NSError(domain: "EKEventStore", code: 0)) }
+                } else { cont.resume(throwing: error ?? EventKitAccessError.notGranted) }
             }
 
             if #available(macOS 14, *) {
@@ -49,12 +51,17 @@ extension EKEventStore: AuthenticatedEventStore {
     }
 
     public func fetchAllCalendars() async throws -> [MBCalendar] {
+        // Without full access EventKit silently returns no calendars, so check
+        // first: ask when macOS hasn't decided, and fail otherwise so the UI
+        // shows "permission required" instead of an empty agenda.
+        try await Self.accessGate.ensureAccess()
+
         // Move enumeration off the main thread so a large source/calendar
         // list does not hang the UI. EKEventStore is @unchecked Sendable
         // (declared at the top of this file), so accessing `shared` from a
         // detached task is safe. A future iteration can promote this into a
         // dedicated actor that owns its own EKEventStore instance.
-        await Task.detached(priority: .userInitiated) {
+        return await Task.detached(priority: .userInitiated) {
             EKEventStore.shared.calendars(for: .event).map { ekCalendar in
                 MBCalendar(
                     title: ekCalendar.title,

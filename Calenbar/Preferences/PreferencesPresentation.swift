@@ -190,9 +190,10 @@ struct PreferencesCalendarPresentation: Equatable {
             connectionState = .authRequired
             statusTone = .error
             statusTextKey = "preferences_status_state_auth_required"
-        } else if state.activeProvider == .macOSEventKit,
-                  state.providerHealth.lastErrorDescription != nil,
-                  state.providerHealth.lastSuccessfulRefresh == nil {
+        } else if state.providerHealth.permissionRequired
+                    || (state.activeProvider == .macOSEventKit
+                        && state.providerHealth.lastErrorDescription != nil
+                        && state.providerHealth.lastSuccessfulRefresh == nil) {
             connectionState = .permissionRequired
             statusTone = .error
             statusTextKey = "preferences_status_state_permission_required"
