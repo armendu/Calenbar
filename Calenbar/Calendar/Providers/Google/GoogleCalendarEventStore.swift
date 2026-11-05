@@ -497,7 +497,10 @@ final class GCEventStore: NSObject,
             if let conferenceData = item["conferenceData"] as? [String: Any],
                let entryPoints = conferenceData["entryPoints"] as? [[String: Any]],
                let videoEntryPoint = entryPoints.first(where: { $0["entryPointType"] as? String == "video" }) {
-                conferenceURL = (videoEntryPoint["uri"] as? String).flatMap(URL.init(string:))
+                // Web links only, like an EventKit event's URL field.
+                conferenceURL = (videoEntryPoint["uri"] as? String)
+                    .flatMap(URL.init(string:))
+                    .flatMap { $0.isWebLink ? $0 : nil }
             }
 
             let organizerRaw = item["organizer"] as? [String: Any]

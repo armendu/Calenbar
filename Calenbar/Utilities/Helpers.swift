@@ -163,24 +163,16 @@ func openInFantastical(startDate: Date, title: String) {
  */
 
 func openLinkFromClipboard() {
-    let pasteboard = NSPasteboard.general
-    let clipboardContent = pasteboard.string(forType: .string) ?? ""
+    let clipboardContent = NSPasteboard.general.string(forType: .string) ?? ""
 
-    if !clipboardContent.isEmpty {
-        let meetingLink = detectMeetingLink(
-            clipboardContent, customRegexes: Defaults[.customRegexes])
-
-        if let meetingLink = meetingLink {
-            MeetingOpener.open(meetingLink: meetingLink)
-        } else {
-            let validUrl = NSURL(string: clipboardContent)
-            if validUrl != nil {
-                URL(string: clipboardContent)?.openInDefaultBrowser()
-            } else {
-                AppMessageCenter.shared.post(.clipboardInvalid)
-            }
-        }
-    } else {
+    switch ClipboardLink.action(for: clipboardContent, customRegexes: Defaults[.customRegexes]) {
+    case let .openMeetingLink(meetingLink):
+        MeetingOpener.open(meetingLink: meetingLink)
+    case let .openWebURL(url):
+        url.openInDefaultBrowser()
+    case .invalid:
+        AppMessageCenter.shared.post(.clipboardInvalid)
+    case .empty:
         AppMessageCenter.shared.post(.clipboardEmpty)
     }
 }

@@ -3,6 +3,14 @@
 Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
 Releases up to 5.0.0 are MeetingBar's.
 
+## Unreleased
+
+* Countdowns round up to the next minute: a meeting at 15:30 reads "in 1m"
+  all through 15:29 instead of "in 0m", in the menu bar and the panel.
+* Join from clipboard only opens meeting links and web pages, and ignores
+  surrounding spaces. Google Meet entry points must be web links too.
+* Look-alike Discord and RingCentral hosts are no longer treated as meetings.
+
 ## 5.1.3 (2026-10-23)
 
 * Fixed an empty agenda after installing or updating Calenbar. It now asks
