@@ -1,10 +1,16 @@
 name: CI
 
+# Pushes run only on master. A commit on any other branch is built by its PR;
+# a push run there too would build it twice, and each run is a separate
+# "Build and Test" check on that commit. macOS runners are scarce, so the
+# duplicate run can sit unassigned until GitHub cancels it, and that
+# cancelled check blocks master's branch protection even when the PR run
+# passed. Use workflow_dispatch to build a branch that has no PR.
 on:
   pull_request:
   push:
     branches:
-      - '**'
+      - master
   workflow_dispatch:
 
 permissions:
