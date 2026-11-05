@@ -56,7 +56,13 @@ done
     || fail "entitlement com.apple.developer.usernotifications.time-sensitive needs a provisioning profile"
 
 # Hardened runtime, and a signature that holds across nested code.
-codesign -dv "$APP" 2>&1 | grep -q 'flags=.*runtime' || fail "hardened runtime is off"
+# Captured first: under pipefail, `grep -q` exiting early can kill codesign
+# with SIGPIPE and fail the check for an app that has the flag.
+SIGNATURE_INFO=$(codesign -dv "$APP" 2>&1 || true)
+case "$SIGNATURE_INFO" in
+    *flags=*runtime*) ;;
+    *) fail "hardened runtime is off" ;;
+esac
 codesign --verify --deep --strict "$APP" 2>/dev/null || fail "code signature doesn't verify"
 
 # The DMG is universal.
