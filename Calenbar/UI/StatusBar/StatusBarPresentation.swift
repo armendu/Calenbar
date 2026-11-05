@@ -282,7 +282,7 @@ enum StatusBarTitlePolicy {
         let title = formattedTitle(rawTitle, settings: settings)
         let isActiveEvent = startDate <= now && endDate > now
         let eventDate = isActiveEvent ? endDate : startDate
-        let timeLeft = formattedTimeLeft(from: now.addingTimeInterval(-60), to: eventDate, calendar: calendar)
+        let timeLeft = formattedTimeLeft(from: now, to: eventDate, calendar: calendar)
         let timeFormat = isActiveEvent ? settings.labels.activeEventTimeFormat : settings.labels.upcomingEventTimeFormat
         let time = String(format: timeFormat, timeLeft)
         return StatusBarTitleText(title: title, time: time, isActiveEvent: isActiveEvent)
@@ -317,12 +317,18 @@ enum StatusBarTitlePolicy {
         }
     }
 
+    /// Time left, rounded up to the next whole minute so it matches the clock:
+    /// a meeting at 15:30 reads "1m" all through 15:29, never "0m".
+    /// (`DateComponentsFormatter` alone drops the leftover seconds.)
     static func formattedTimeLeft(from start: Date, to end: Date, calendar: Calendar) -> String {
         let formatter = DateComponentsFormatter()
         formatter.unitsStyle = .abbreviated
         formatter.allowedUnits = [.minute, .hour, .day]
         formatter.calendar = calendar
-        return formatter.string(from: start, to: end) ?? ""
+        let seconds = end.timeIntervalSince(start)
+        guard seconds > 0 else { return formatter.string(from: start, to: end) ?? "" }
+        let roundedUp = start.addingTimeInterval((seconds / 60).rounded(.up) * 60)
+        return formatter.string(from: start, to: roundedUp) ?? ""
     }
 }
 
