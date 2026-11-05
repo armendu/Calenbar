@@ -3,7 +3,7 @@
 Calenbar is a fork of [MeetingBar](https://github.com/leits/MeetingBar).
 Releases up to 5.0.0 are MeetingBar's.
 
-## Unreleased
+## 5.1.4 (2026-11-05)
 
 * Countdowns round up to the next minute: a meeting at 15:30 reads "in 1m"
   all through 15:29 instead of "in 0m", in the menu bar and the panel.
