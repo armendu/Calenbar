@@ -56,7 +56,7 @@ class CalendarSyncTests: BaseTestCase {
             .store(in: &cancellables)
 
         // 4) Wait
-        wait(for: [calExpectation, evtExpectation], timeout: 1.0)
+        wait(for: [calExpectation, evtExpectation], timeout: refreshTimeout)
     }
 
     func testRefreshPreservesSelectedSharedGoogleCalendars() async throws {
@@ -81,7 +81,7 @@ class CalendarSyncTests: BaseTestCase {
             .first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         XCTAssertEqual(
             Set(store.fetchedEventCalendarIDs.last ?? []),
@@ -97,7 +97,7 @@ class CalendarSyncTests: BaseTestCase {
             .store(in: &cancellables)
 
         try await manager.refreshSources()
-        await fulfillment(of: [refreshExp], timeout: 1.0)
+        await fulfillment(of: [refreshExp], timeout: refreshTimeout)
 
         XCTAssertEqual(
             AppSettings.selectedCalendarIDs(for: .googleCalendar),
@@ -138,7 +138,7 @@ class CalendarSyncTests: BaseTestCase {
                 eventsExp.fulfill()
             }
             .store(in: &cancellables)
-        await fulfillment(of: [eventsExp], timeout: 1.0)
+        await fulfillment(of: [eventsExp], timeout: refreshTimeout)
 
         XCTAssertEqual(store.fetchedEventCalendarIDs.first, [event.calendar.id])
         XCTAssertEqual(AppSettings.selectedCalendarIDs(for: .macOSEventKit), [event.calendar.id])
@@ -182,7 +182,7 @@ class CalendarSyncTests: BaseTestCase {
             )
             .store(in: &cancellables)
 
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         // Prepare second expectation BEFORE switching the store
         let switchedExp = expectation(description: "events after switch")
@@ -202,7 +202,7 @@ class CalendarSyncTests: BaseTestCase {
         manager.repository = CalendarRepository(store: storeB)
         try await manager.refreshSources()  // sends refreshSubject
 
-        await fulfillment(of: [switchedExp], timeout: 1.0)
+        await fulfillment(of: [switchedExp], timeout: refreshTimeout)
 
     }
 
@@ -218,7 +218,7 @@ class CalendarSyncTests: BaseTestCase {
             .first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         _ = await manager.changeEventStoreProvider(.googleCalendar)
         _ = await manager.changeEventStoreProvider(.macOSEventKit)
@@ -431,7 +431,7 @@ final class FailedRefreshTests: BaseTestCase {
         manager.$calendars.drop(while: \.isEmpty).first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         store.stubbedError = NSError(domain: "test", code: 1)
 
@@ -445,7 +445,7 @@ final class FailedRefreshTests: BaseTestCase {
             .store(in: &cancellables)
 
         try await manager.refreshSources()
-        await fulfillment(of: [preservedExp], timeout: 1.0)
+        await fulfillment(of: [preservedExp], timeout: refreshTimeout)
     }
 
     func test_failedRefreshPreservesExistingEvents() async throws {
@@ -460,7 +460,7 @@ final class FailedRefreshTests: BaseTestCase {
         manager.$events.drop(while: \.isEmpty).first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         store.stubbedError = NSError(domain: "test", code: 1)
 
@@ -474,7 +474,7 @@ final class FailedRefreshTests: BaseTestCase {
             .store(in: &cancellables)
 
         try await manager.refreshSources()
-        await fulfillment(of: [preservedExp], timeout: 1.0)
+        await fulfillment(of: [preservedExp], timeout: refreshTimeout)
     }
 
     func test_failedInitialRefreshDoesNotCrash() {
@@ -484,7 +484,7 @@ final class FailedRefreshTests: BaseTestCase {
 
         let exp = expectation(description: "brief wait after failed initial refresh")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { exp.fulfill() }
-        wait(for: [exp], timeout: 1.0)
+        wait(for: [exp], timeout: refreshTimeout)
 
         XCTAssertEqual(manager.calendars, [])
         XCTAssertEqual(manager.events, [])
@@ -506,7 +506,7 @@ final class RefreshCoalescingTests: BaseTestCase {
         manager.$calendars.drop(while: \.isEmpty).first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 2.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         let countBefore = store.fetchCallCount
 
@@ -557,7 +557,7 @@ final class RefreshTriggerTests: BaseTestCase {
             }
             .store(in: &cancellables)
 
-        wait(for: [initialExp], timeout: 1.0)
+        wait(for: [initialExp], timeout: refreshTimeout)
 
         // Prepare expectation BEFORE flipping the Default
         let switchedExp = expectation(description: "events after period change")
@@ -574,7 +574,7 @@ final class RefreshTriggerTests: BaseTestCase {
         store.stubbedEvents = [second]
         Defaults[.showEventsForPeriod] = .today_n_tomorrow
 
-        wait(for: [switchedExp], timeout: 1.0)
+        wait(for: [switchedExp], timeout: refreshTimeout)
     }
 
     func test_refreshSourcesPublishesEvents() async throws {
@@ -599,7 +599,7 @@ final class RefreshTriggerTests: BaseTestCase {
         // Act
         try await manager.refreshSources()
 
-        await fulfillment(of: [exp], timeout: 1)
+        await fulfillment(of: [exp], timeout: refreshTimeout)
     }
 }
 
@@ -626,7 +626,7 @@ final class ProviderHealthTests: BaseTestCase {
             }
             .store(in: &cancellables)
 
-        await fulfillment(of: [exp], timeout: 1.0)
+        await fulfillment(of: [exp], timeout: refreshTimeout)
     }
 
     func test_failedRefreshSetsErrorAndPreservesLastSuccess() async throws {
@@ -641,7 +641,7 @@ final class ProviderHealthTests: BaseTestCase {
             .first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         let lastSuccess = manager.providerHealth.lastSuccessfulRefresh
         store.stubbedError = NSError(
@@ -663,7 +663,7 @@ final class ProviderHealthTests: BaseTestCase {
             .store(in: &cancellables)
 
         try await manager.refreshSources()
-        await fulfillment(of: [failExp], timeout: 1.0)
+        await fulfillment(of: [failExp], timeout: refreshTimeout)
     }
 
     func test_authErrorSetsAuthRequired() {
@@ -768,7 +768,7 @@ final class ProviderHealthTests: BaseTestCase {
             .first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         let lastSuccess = manager.providerHealth.lastSuccessfulRefresh
         store.stubbedEventsError = AuthError.notSignedIn
@@ -788,7 +788,7 @@ final class ProviderHealthTests: BaseTestCase {
             .store(in: &cancellables)
 
         try await manager.refreshSources()
-        await fulfillment(of: [failureExp], timeout: 1.0)
+        await fulfillment(of: [failureExp], timeout: refreshTimeout)
 
         XCTAssertEqual(manager.calendars, [calendar])
         XCTAssertEqual(manager.events, [event])
@@ -806,7 +806,7 @@ final class ProviderHealthTests: BaseTestCase {
             .first()
             .sink { _ in initialExp.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [initialExp], timeout: 1.0)
+        await fulfillment(of: [initialExp], timeout: refreshTimeout)
 
         let lastSuccess = manager.providerHealth.lastSuccessfulRefresh
         store.stubbedSignInError = AuthError.notSignedIn
@@ -885,7 +885,7 @@ final class ThisWeekFetchTests: BaseTestCase {
             .first()
             .sink { _ in published.fulfill() }
             .store(in: &cancellables)
-        wait(for: [published], timeout: 1.0)
+        wait(for: [published], timeout: refreshTimeout)
 
         XCTAssertEqual(manager.events.map(\.id), ["current"])
         XCTAssertEqual(manager.laterThisWeekEvents.map(\.id), ["later"])
@@ -914,7 +914,7 @@ final class ThisWeekFetchTests: BaseTestCase {
             .first()
             .sink { _ in loaded.fulfill() }
             .store(in: &cancellables)
-        await fulfillment(of: [loaded], timeout: 1.0)
+        await fulfillment(of: [loaded], timeout: refreshTimeout)
 
         let result = await manager.changeEventStoreProvider(.googleCalendar)
 

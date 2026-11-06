@@ -91,7 +91,7 @@ final class EventKitAccessTests: BaseTestCase {
                 XCTAssertFalse(health.authRequired)
                 exp.fulfill()
             }
-        await fulfillment(of: [exp], timeout: 1.0)
+        await fulfillment(of: [exp], timeout: refreshTimeout)
         cancellable.cancel()
     }
 
