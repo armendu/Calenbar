@@ -276,7 +276,7 @@ extension MeetingProvider {
             make(
                 .ringcentral,
                 icon: "ringcentral_icon",
-                pattern: #"https?://([a-z0-9.]+)?ringcentral\.com/[^\s]*"#),
+                pattern: #"https?://([a-z0-9-]+\.)*ringcentral\.com/[^\s]*"#),
 
             // GoToMeeting
             make(
@@ -430,7 +430,7 @@ extension MeetingProvider {
                 icon: "discord_icon",
                 height: 12.13,
                 pattern:
-                    #"(http|https|discord)://(www\.)?(canary\.)?discord(app)?\.([a-zA-Z]{2,})(.+)?"#
+                    #"(http|https|discord)://(www\.)?(canary\.|ptb\.)?(discord(app)?\.com|discord\.gg)(/[^\s]*)?"#
             ),
 
             // Blackboard Collaborate (no custom icon)

@@ -218,6 +218,36 @@ func regex(for service: MeetingServices) -> NSRegularExpression? {
     meetingLinkRegexes[service]
 }
 
+extension URL {
+    /// Whether this is a web page (http or https). Links from invites, Google
+    /// conference data or the clipboard that aren't recognised meeting links
+    /// open only when this is true: other schemes hand off to arbitrary apps
+    /// (file, ssh, smb, …).
+    var isWebLink: Bool {
+        ["http", "https"].contains(scheme?.lowercased())
+    }
+}
+
+/// What "Join from clipboard" does with the clipboard's text.
+enum ClipboardLink: Equatable {
+    case openMeetingLink(MeetingLink)
+    case openWebURL(URL)
+    case invalid
+    case empty
+
+    static func action(for content: String, customRegexes: [String] = []) -> ClipboardLink {
+        let text = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return .empty }
+        if let meetingLink = detectMeetingLink(text, customRegexes: customRegexes) {
+            return .openMeetingLink(meetingLink)
+        }
+        if let url = URL(string: text), url.isWebLink, url.host != nil {
+            return .openWebURL(url)
+        }
+        return .invalid
+    }
+}
+
 func detectMeetingLink(_ rawText: String, customRegexes: [String] = []) -> MeetingLink? {
     let text = cleanupGoogleRedirects(rawText: cleanupOutlookSafeLinks(rawText: rawText))
 
@@ -685,7 +715,7 @@ enum MeetingOpeningPolicy {
 
         // Only web links: the event's URL field comes from whoever sent the
         // invite, and other schemes hand off to arbitrary apps (ssh, smb, …).
-        if let eventURL = event.eventURL, ["http", "https"].contains(eventURL.scheme?.lowercased()) {
+        if let eventURL = event.eventURL, eventURL.isWebLink {
             return .openEventURL(eventURL)
         }
 

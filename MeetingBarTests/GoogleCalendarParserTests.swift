@@ -18,6 +18,29 @@ final class GoogleCalendarParserTests: XCTestCase {
         color: .black
     )
 
+    /// A video entry point is opened without asking, so only web links count.
+    func testNonWebConferenceEntryPointIsIgnored() {
+        for uri in ["file:///Applications/Calculator.app", "smb://attacker.example/share", "ssh://attacker.example"] {
+            let event = GCEventStore.GCParser.event(
+                from: [
+                    "id": "event-1",
+                    "summary": "Standup",
+                    "status": "confirmed",
+                    "start": ["dateTime": "2026-04-24T10:00:00Z"],
+                    "end": ["dateTime": "2026-04-24T10:30:00Z"],
+                    "conferenceData": [
+                        "entryPoints": [["entryPointType": "video", "uri": uri]]
+                    ]
+                ],
+                calendar: calendar
+            )
+
+            XCTAssertNotNil(event, uri)
+            XCTAssertNil(event?.conferenceURL, uri)
+            XCTAssertNil(event?.meetingLink, uri)
+        }
+    }
+
     func testTimedEventParses() {
         let event = GCEventStore.GCParser.event(
             from: [

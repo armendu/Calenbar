@@ -1,10 +1,11 @@
 name: Lint
 
+# Pushes run only on master, so a PR commit is linted once (see ci.yml).
 on:
   pull_request:
   push:
     branches:
-      - '**'
+      - master
   workflow_dispatch:
 
 permissions:
